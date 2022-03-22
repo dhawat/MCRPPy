@@ -108,7 +108,7 @@ build-backend = "poetry.core.masonry.api"
 # poetry run pytest
 # if your package contrains "-", say pkg-name, then --cov=pkg_name
 minversion = "6.0"
-addopts = "-ra -q -vv --cov=packagename --cov-report=term-missing --cov-report=xml"
+addopts = "-ra -q -vv --cov=GPPY --cov-report=term-missing --cov-report=xml"
 testpaths = ["tests"]
 
 # For other tools to be black compliant
