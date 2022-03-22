@@ -7,7 +7,7 @@ authors = ["Diala Hawat <dialahawat7@gmail.com>"]
 maintainers = ["Diala Hawat <dialahawat7@gmail.com>"]
 readme = "README.md" # path to README file (.md or .rst)
 homepage = "https://github.com/dhawat" # url
-repository = "https://github.com/dhawat/gravity_point_process" # url
+repository = "https://github.com/dhawat/GravityPointProcess" # url
 documentation = "" # url
 keywords = [
     "python",

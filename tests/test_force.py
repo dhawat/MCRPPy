@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from gravitypointprocess.gravity_point_process import _force, _volume_unit_ball
+from GPPY.gravity_point_process import _force, _volume_unit_ball
 
 
 @pytest.mark.parametrize(

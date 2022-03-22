@@ -10,7 +10,6 @@
     "workbench.editorAssociations": {
         "*.ipynb": "jupyter-notebook"
     },
-    "workbench.sideBar.location": "right",
     "workbench.statusBar.visible": true,
     "window.openFilesInNewWindow": "off",
     // Files
@@ -98,5 +97,6 @@
     "python.testing.unittestEnabled": false,
     "python.testing.nosetestsEnabled": false,
     "python.testing.pytestEnabled": true,
+    "esbonio.sphinx.confDir": "${workspaceFolder}/docs",
     // "restructuredtext.languageServer.disabled": true,
 }
