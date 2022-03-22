@@ -1,5 +1,5 @@
 [tool.poetry] # https://python-poetry.org/docs/pyproject/
-name = "packagename"
+name = "GPPY"
 version = "0.1.0"
 description = "Python project boilerplate"
 license = "MIT"
