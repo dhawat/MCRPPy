@@ -3,6 +3,8 @@ import numpy as np
 from structure_factor.spatial_windows import UnitBallWindow
 from multiprocessing import Pool, freeze_support
 from functools import partial
+from GPPY.gravitational_force import force_k
+from GPPY.utils import sort_points_by_increasing_distance
 
 
 class GravityPointProcess:
@@ -25,74 +27,36 @@ class GravityPointProcess:
         """Volume of each basin of attraction of the gravitational allocation"""
         return 1 / self.point_pattern.intensity
 
-    def _pushed_point(self, point, epsilon, stop_time):
+    def _pushed_point(self, k, epsilon, stop_time):
         points = self.point_pattern.points
         intensity = self.point_pattern.intensity
+        x = points[k]
         for _ in range(0, stop_time):
-            point = point - epsilon * _force(
-                z=point, points=points, intensity=intensity
-            )
-        return point
+            x = x - epsilon * force_k(k=k, x=x, points=points, intensity=intensity)
+        return x
 
     def pushed_point_process(self, epsilon, stop_time, core_number=7):
         freeze_support()
-        list_points = self.point_pattern.points[
-            :,
-        ].tolist()
+        points_nb = self.point_pattern.points.shape[0]
         with Pool(core_number) as pool:
             new_points = pool.map(
                 partial(self._pushed_point, epsilon=epsilon, stop_time=stop_time),
-                list_points,
+                list(range(points_nb)),
             )
 
         return np.vstack(new_points)
 
     def equilibrium_point_process(self, epsilon, stop_time):
         points = self.point_pattern.points
-        points_number = points.shape[0]
+        points_nb = points.shape[0]
         intensity = self.point_pattern.intensity
         for _ in range(0, stop_time):
-            for n in range(0, points_number):
-                points[n] = points[n] - epsilon * _force(
-                    z=points[n], points=points, intensity=intensity
-                )
+            for n in range(0, points_nb):
+                f_k = force_k(k=n, x=points[n], points=points, intensity=intensity)
+                points[n] = points[n] - epsilon * f_k
         return points
 
 
-def _volume_unit_ball(d):
-    center = np.full(shape=(d), fill_value=0)
-    return UnitBallWindow(center=center).volume
-
-
-def _force(z, points, intensity):
-    r"""Gravitational force of a the point_pattern :math:`\mathcal{X}` applied to `z`  :math:`F(x) = \sum_{x \in \mathcal{X}, x \neq z \\ \|x\|_2 \uparrow} \limits \frac{x - z}{\|x-z\|_2^d} - \rho \kappa_d z`
-    Args:
-        z (np.ndarray): :math:`1\times d` array
-
-    Returns:
-        _type_: _description_
-    """
-    d = points.shape[1]
-    # drop z from points
-    # todo drop corresponding points without cheking inside array
-    z = np.atleast_2d(z)
-    index = points != z
-    points = points[index[:, 1]]
-    gravity = (points - z).astype("float")  # numerator
-    denominator = np.linalg.norm(gravity, axis=1) ** d  # denominator
-    np.divide(gravity, np.atleast_2d(denominator).T, out=gravity)
-    kappa_d = _volume_unit_ball(d)  # volume of unit ball
-    force_z = np.sum(gravity, axis=0) + (intensity) * kappa_d * z
-    return force_z
-
-
-def _sort_points_by_increasing_distance(points):
-    norm_points = np.linalg.norm(points, axis=1)
-    index = np.argsort(norm_points)
-    points = points[index]
-    return points
-
-
 def _sort_point_pattern(point_pattern):
-    point_pattern.points = _sort_points_by_increasing_distance(point_pattern.points)
+    point_pattern.points = sort_points_by_increasing_distance(point_pattern.points)
     return point_pattern
