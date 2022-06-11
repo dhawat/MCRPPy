@@ -1,7 +1,8 @@
 import numpy as np
 from GPPY.utils import volume_unit_ball
+from numba import jit
 
-
+#@jit(nopython=True)
 def force(x, points, intensity):
     r"""
     .. math::
@@ -20,6 +21,21 @@ def force(x, points, intensity):
     kappa_d = volume_unit_ball(d)
     force_x = np.sum(numerator, axis=0) + (intensity) * kappa_d * x
     return force_x
+
+# @jit(nopython=True)
+# def force_fast(x, numerator, denominator, intensity, kappa_d):
+#     numerator = np.divide(numerator, np.atleast_2d(denominator).T)
+#     force_x = np.sum(numerator, axis=0) + (intensity) * kappa_d * x
+#     return force_x
+
+# def force_ffast(x, points, intensity):
+#     d = points.shape[1]
+#     x = np.atleast_2d(x)
+#     numerator = points - x
+#     denominator = np.linalg.norm(numerator, axis=1) ** d
+#     d = points.shape[1]
+#     kappa_d = volume_unit_ball(d)
+#     return force_fast(x, numerator, denominator, intensity, kappa_d)
 
 
 def force_k(k, x, points, intensity):

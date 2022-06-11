@@ -1,6 +1,7 @@
+from curses import window
 from structure_factor.point_pattern import PointPattern
 import numpy as np
-from structure_factor.spatial_windows import UnitBallWindow
+from numba import jit
 from multiprocessing import Pool, freeze_support
 from functools import partial
 from GPPY.gravitational_force import force_k
@@ -46,6 +47,11 @@ class GravityPointProcess:
 
         return np.vstack(new_points)
 
+    def pushed_point_pattern(self, epsilon, stop_time, core_number=7):
+        points = self.pushed_point_process(epsilon, stop_time, core_number)
+        window = self.point_pattern.window
+        return PointPattern(points, window)
+
     def equilibrium_point_process(self, epsilon, stop_time):
         points = self.point_pattern.points
         points_nb = points.shape[0]
@@ -56,7 +62,22 @@ class GravityPointProcess:
                 points[n] = points[n] - epsilon * f_k
         return points
 
+    def equilibrium_point_pattern(self, epsilon, stop_time):
+        points = self.equilibrium_point_process(epsilon, stop_time)
+        window = self.point_pattern.window
+        return PointPattern(points, window)
 
 def _sort_point_pattern(point_pattern):
     point_pattern.points = sort_points_by_increasing_distance(point_pattern.points)
     return point_pattern
+
+# @jit
+# def fast_push_point(points, intensity, epsilon, stop_time):
+#     points_nb = points.shape[0]
+#     push = []
+#     for j in range(points_nb):
+#         x = points[j]
+#         for i in range(0, stop_time):
+#             x = x - epsilon * force_k(k=j, x=x, points=points, intensity=intensity)
+#         push.append(x)
+#     return np.vstack(push)
