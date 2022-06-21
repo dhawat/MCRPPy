@@ -3,6 +3,7 @@ from GPPY.utils import volume_unit_ball
 from numba import jit
 
 #@jit(nopython=True)
+#todo try to compute the pairwise distance of all points once each time this matrix will contains all the needed distances for this step in time. In the code below we compute each distance twice. consider function which decide between paralellizing and vectorizing (matrix of force) depending on the complexity for the number of points and the steps in time
 def force(x, points, intensity):
     r"""
     .. math::

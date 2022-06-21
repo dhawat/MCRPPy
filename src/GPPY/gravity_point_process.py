@@ -28,6 +28,10 @@ class GravityPointProcess:
         """Volume of each basin of attraction of the gravitational allocation"""
         return 1 / self.point_pattern.intensity
 
+    @property
+    def epsilon(self):
+        return (self.allocation_basin_volume**(1/self.dimension))/100
+
     def _pushed_point(self, k, epsilon, stop_time):
         points = self.point_pattern.points
         intensity = self.point_pattern.intensity
@@ -70,6 +74,8 @@ class GravityPointProcess:
 def _sort_point_pattern(point_pattern):
     point_pattern.points = sort_points_by_increasing_distance(point_pattern.points)
     return point_pattern
+
+
 
 # @jit
 # def fast_push_point(points, intensity, epsilon, stop_time):

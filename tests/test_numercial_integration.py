@@ -1,15 +1,16 @@
 import numpy as np
 import pytest
-from GPPY.numerical_integration import delyon_portier_integration, kernel, leave_one_out_kernel_estimator, bandwidth_delyon_portier, function_test_1_delyon_portier
+from GPPY.numerical_integration import delyon_portier_integration, kernel, leave_one_out_kernel_estimator, bandwidth_0_delyon_portier, function_test_1_delyon_portier, variance_kernel
 
 @pytest.mark.parametrize(
-    "x, expected",
-    [(np.array([[0, 0]]), 12/(2*np.pi)),
-     (np.array([[0, 0, 0]]), 15/(2*np.pi)),
-     (np.array([[0, 0], [0.5, 0], [-1,2]]), np.array([12/(2*np.pi), 9/(4*np.pi), 0]))]
+    "x, choice, expected",
+    [(np.array([[0, 0]]), "DelPor", 12/(2*np.pi)),
+     (np.array([[0, 0, 0]]), "DelPor", 15/(2*np.pi)),
+     (np.array([[0, 0], [0.5, 0], [-1,2]]), "DelPor", np.array([12/(2*np.pi), 9/(4*np.pi), 0])),
+     (np.array([[0,0], [1, 5], [0.5,0]]), "Epanechnikov", np.array([2/np.pi, 0, 3/(2*np.pi)]))]
 )
-def test_kernel(x, expected):
-    result = kernel(x)
+def test_kernel(x, choice, expected):
+    result = kernel(x, choice)
     np.testing.assert_array_almost_equal(result, expected)
 
 @pytest.mark.parametrize(
@@ -32,12 +33,10 @@ def test_delyon_portier_integration(points, expected):
     result = delyon_portier_integration(f, points, bandwidth)
     np.testing.assert_array_almost_equal(result, expected)
 
-def test_bandwidth_delyon_portier():
-    d = 2
-    nb_points = 2**7
-    sigma = 1
-    expected =(12/5)**(1/6)
-    result = bandwidth_delyon_portier(d, sigma, nb_points)
+def test_bandwidth_0_delyon_portier():
+    points= np.array([[0, 1], [1, 1], [-1,-1]])
+    expected =(2**9/5)**(1/6)
+    result = bandwidth_0_delyon_portier(points)
     np.testing.assert_equal(result, expected)
 
 @pytest.mark.parametrize(
@@ -47,4 +46,14 @@ def test_bandwidth_delyon_portier():
 )
 def test_function_test_1(x, expected):
     result = function_test_1_delyon_portier(x)
+    np.testing.assert_almost_equal(result, expected)
+
+
+def test_variance_kernel():
+    points = np.array([[0, 0], [0.25, 0], [0.5, 0.5]])
+    x = np.array([[0, 0.5]])
+    idx_out=1
+    bandwidth = 2
+    result = variance_kernel(idx_out, x, points, bandwidth)
+    expected = 0
     np.testing.assert_almost_equal(result, expected)
