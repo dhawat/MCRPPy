@@ -28,6 +28,7 @@ class GravityPointProcess:
         """Volume of each basin of attraction of the gravitational allocation"""
         return 1 / self.point_pattern.intensity
 
+    #todo the force is bigger in dimension 2. it 's divergent for infinite number of points so chose a smaller epsilon for d=2 than for higher dimension
     @property
     def epsilon(self):
         return (self.allocation_basin_volume**(1/self.dimension))/100
