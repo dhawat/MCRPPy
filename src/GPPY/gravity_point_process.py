@@ -5,7 +5,7 @@ from numba import jit
 from multiprocessing import Pool, freeze_support
 from functools import partial
 from GPPY.gravitational_force import force_k
-from GPPY.utils import sort_points_by_increasing_distance
+from GPPY.utils import sort_points_by_increasing_distance, sort_output_push_point
 
 
 class GravityPointProcess:
@@ -37,8 +37,12 @@ class GravityPointProcess:
         points = self.point_pattern.points
         intensity = self.point_pattern.intensity
         x = points[k]
+        d = points.shape[1]
+        if not isinstance (epsilon, list):
+            epsilon = [epsilon]
+        epsilon_matrix = [[epsilon[i]]*d for i in range(len(epsilon))]
         for _ in range(0, stop_time):
-            x = x - epsilon * force_k(k=k, x=x, points=points, intensity=intensity)
+            x = x - epsilon_matrix * force_k(k=k, x=x, points=points, intensity=intensity)
         return x
 
     def pushed_point_process(self, epsilon, stop_time, core_number=7):
@@ -49,13 +53,13 @@ class GravityPointProcess:
                 partial(self._pushed_point, epsilon=epsilon, stop_time=stop_time),
                 list(range(points_nb)),
             )
-
-        return np.vstack(new_points)
+        return sort_output_push_point(new_points, epsilon)
 
     def pushed_point_pattern(self, epsilon, stop_time, core_number=7):
         points = self.pushed_point_process(epsilon, stop_time, core_number)
         window = self.point_pattern.window
-        return PointPattern(points, window)
+        point_patterns = [PointPattern(p, window) for p in points]
+        return point_patterns
 
     def equilibrium_point_process(self, epsilon, stop_time):
         points = self.point_pattern.points

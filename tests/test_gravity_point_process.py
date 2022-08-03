@@ -6,31 +6,32 @@ import numpy as np
 
 
 @pytest.mark.parametrize(
-    "k, expected",
+    "k, epsilon, expected",
     [
-        (0, np.array([[-0.5, 0.5]])),
-        (1, np.array([[-0.2, -1.4]])),
-        (2, np.array([[0.7, 0.9]])),
+        (0, 1, np.array([[-0.5, 0.5]])),
+        (1, 1, np.array([[-0.2, -1.4]])),
+        (2, 1, np.array([[0.7, 0.9]])),
+        (2, [1, 1], np.array([[0.7, 0.9], [0.7, 0.9]]))
     ],
 )
-def test_pushed_point(k, expected):
+def test_pushed_point(k, epsilon, expected):
     "test pushed point with point_pattern of 3 simple points and one step in time"
     points = np.array([[0, 0], [0, -1], [1, 1]])
     window = BallWindow(center=[0, 0], radius=1.1)
     point_pattern = PointPattern(points, window, intensity=1 / np.pi)
     gravity_pp = GravityPointProcess(point_pattern)
-    result = gravity_pp._pushed_point(k=k, epsilon=1, stop_time=1)
+    result = gravity_pp._pushed_point(k=k, epsilon=epsilon, stop_time=1)
     np.testing.assert_array_almost_equal(result, expected)
 
 
 def test_pushed_point_process():
-    "test with point_pattern of 3 simple points and one step in time"
+    "test with point_pattern of 3 simple points and one step in time, with one epsilon"
     points = np.array([[0, 0], [0, -1], [1, 1]])
     window = BallWindow(center=[0, 0], radius=1.1)
     point_pattern = PointPattern(points, window, intensity=1 / np.pi)
     expected = np.array([[-0.5, 0.5], [-0.2, -1.4], [0.7, 0.9]])
     gravity_pp = GravityPointProcess(point_pattern)
-    result = gravity_pp.pushed_point_process(epsilon=1, stop_time=1)
+    result = gravity_pp.pushed_point_process(epsilon=1, stop_time=1)[0]
     np.testing.assert_array_almost_equal(result, expected)
 
 
