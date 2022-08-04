@@ -20,3 +20,7 @@ def sort_output_push_point(x, epsilon):
         x_e = np.vstack([x[i][e] for i in range(len(x))])
         x_list.append(x_e)
     return x_list
+
+def _sort_point_pattern(point_pattern):
+    point_pattern.points = sort_points_by_increasing_distance(point_pattern.points)
+    return point_pattern

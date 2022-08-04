@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from GPPY.gravitational_force import force, force_k
+from GPPY.gravitational_force import force, force_k, force_truncated_k
 from GPPY.utils import volume_unit_ball
 
 
@@ -42,4 +42,20 @@ def test_force_from_point_with_mass(n, d, intensity, z, test):
 def test_force_k(k, x, points, intensity, expected):
     "test on simple data"
     result = force_k(k, x, points, intensity)
+    np.testing.assert_array_almost_equal(result, expected)
+
+@pytest.mark.parametrize(
+    "p, q, k, x, points, intensity, expected",
+    [
+        (10, 0.1, 2, np.full((1, 2), 0), np.full((4, 2), 1), 1, np.full((1, 2), 3 / 2 )),
+        (10, 4.5, 2, np.array([[1, 0]]),
+            np.array([[0, 1], [2, 0], [-1, 4], [-5, 6]]),
+            0,
+            np.array([[-1 / 12, 1 / 12]]),
+        ),
+    ],
+)
+def test_force_truncated_k(p, q, k, x, points, intensity, expected):
+    "test on simple data"
+    result = force_truncated_k(p, q, k, x, points, intensity)
     np.testing.assert_array_almost_equal(result, expected)
