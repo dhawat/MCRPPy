@@ -1,6 +1,7 @@
 import numpy as np
 from GPPY.utils import volume_unit_ball
 from numba import jit
+import matplotlib as plt
 from structure_factor.spatial_windows import BallWindow
 
 #@jit(nopython=True)
@@ -61,12 +62,19 @@ def force_k(k, x, points, intensity):
     return force_x
 
 
-def force_truncated_k(p, q, k, x, points, intensity):
+def force_truncated_k(p, q, k, x, points, intensity, ax=None):
     assert k <= points.shape[0] - 1
     points = np.delete(points, k, axis=0)
     window = BallWindow(center=x.ravel(), radius=p)
     subwindow = BallWindow(center=x.ravel(), radius=q)
     support = np.logical_and(window.indicator_function(points), np.logical_not(subwindow.indicator_function(points)))
     points_support = points[support]
+    if ax is not None:
+        ax.scatter(points_support[:,0], points_support[:,1], c="r", s=1, label="points used")
+        ax.plot(x[0], x[1], 'b.', label="x")
+        window.plot(axis=ax, color='g', label="big window")
+        subwindow.plot(axis=ax, color="y", label="small window")
+        ax.legend()
+    #print("total", points.shape, "actual", points_support.shape)
     force_x = force(x, points_support, intensity)
     return force_x
