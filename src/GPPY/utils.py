@@ -1,5 +1,5 @@
 import numpy as np
-from structure_factor.spatial_windows import UnitBallWindow
+from structure_factor.spatial_windows import UnitBallWindow, BallWindow
 
 
 def sort_points_by_increasing_distance(points):
@@ -24,3 +24,11 @@ def sort_output_push_point(x, epsilon):
 def _sort_point_pattern(point_pattern):
     point_pattern.points = sort_points_by_increasing_distance(point_pattern.points)
     return point_pattern
+
+def indicator_annulus_window(points, center, small_radius, large_radius):
+    large_window = BallWindow(center, large_radius)
+    if small_radius == 0:
+        indicator = large_window.indicator_function(points)
+    else:
+        small_window = BallWindow(center, small_radius)
+    return indicator
