@@ -1,5 +1,7 @@
 import numpy as np
 from GPPY.utils import volume_unit_ball
+from scipy.spatial import KDTree
+
 from numba import jit
 import copy
 import matplotlib as plt
@@ -57,55 +59,34 @@ def force_inhomogeneous(x, point_pattern, betta, correction=True):
         force_x = np.atleast_2d(np.sum(numerator, axis=0))
     return force_x*betta/intensity(x) #! remove intensity(x)
 
-def force_truncated_k(p, q, k, x, points, intensity, correction=True, ax=None):
-    assert k <= points.shape[0] - 1
-    points = np.delete(points, k, axis=0)
-    #todo creat annulus window class
-    window = BallWindow(center=x.ravel(), radius=p)
-    if q==0:
-        support=window.indicator_function(points)
-    else:
-        subwindow = BallWindow(center=x.ravel(), radius=q)
-        support = np.logical_and(window.indicator_function(points), np.logical_not(subwindow.indicator_function(points)))
-    points_support = points[support]
-    if ax is not None:
-        ax.scatter(points_support[:,0], points_support[:,1], c="r", s=1, label="points used")
-        ax.plot(x[0], x[1], 'b.', label="x")
-        window.plot(axis=ax, color='g', label="big window")
-        subwindow.plot(axis=ax, color="y", label="small window")
-        ax.legend()
-    #print("total", points.shape, "actual", points_support.shape)
-    force_x = force_base(x, points_support, intensity, correction=correction)
-    return force_x
 
-
-def force_homogeneous(x, point_pattern, p=None, q=0, correction=True):
+def force_homogeneous(x, point_pattern, correction=True, p=None, kd_tree=None, q=0, k=None):
     points = point_pattern.points
     intensity = point_pattern.intensity
-    if p is None:
-        window = point_pattern.window
-    elif q==0:
-        #todo add test
-        window = BallWindow(center=x.ravel(), radius=p)
-    else:
-        window = AnnulusWindow(center=x.ravel(), large_radius=p, small_radius=q)
-    points_in_window = points[window.indicator_function(points)]
+    if p is not None:
+        if q==0:
+            idx_points_in_window_ = kd_tree.query_ball_point(x=x.ravel(), r=p)
+            idx_points_in_window_.remove(k)
+            idx_points_in_window = [i if i<k else i-1 for i in idx_points_in_window_] #kd tree is built on all points (without removing k)
+            points = points[idx_points_in_window]
+        else:
+            #! add warning that this method may full memory while using multiprocessing?
+            window = AnnulusWindow(center=x.ravel(), large_radius=p, small_radius=q)
+            idx_points_in_window = window.indicator_function(points)
+            points = points[idx_points_in_window]
     #print("total", points.shape, "actual", points_support.shape)
-    force_x = force_base(x, points_in_window, intensity=intensity, correction=correction)
+    force_x = force_base(x, points, intensity=intensity, correction=correction)
     return force_x
 
 def force_k(k, x, point_pattern, inhomogeneous=False, **kwargs):
-    point_pattern_ = copy.deepcopy(point_pattern)
-    points = point_pattern_.points
+    points = point_pattern.points
     assert k <= points.shape[0] - 1
-    point_pattern_.points = np.delete(points, k, axis=0)
+    point_pattern.points = np.delete(points, k, axis=0)
     if inhomogeneous:
-        force_x = force_inhomogeneous(x, point_pattern_, **kwargs)
+        force_x = force_inhomogeneous(x, point_pattern, k=k, **kwargs)
     else:
-        force_x = force_homogeneous(x, point_pattern_, **kwargs)
+        force_x = force_homogeneous(x, point_pattern, k=k, **kwargs)
     return force_x
-
-
 
 # @jit(nopython=True)
 # def force_fast(x, numerator, denominator, intensity, kappa_d):

@@ -7,6 +7,7 @@ from multiprocessing import Pool, freeze_support
 from functools import partial
 from GPPY.gravitational_force import force_k
 from GPPY.utils import sort_output_push_point, _sort_point_pattern, volume_unit_ball
+from scipy.spatial import KDTree
 from structure_factor.spatial_windows import subwindow_parameter_max
 
 
@@ -41,8 +42,9 @@ class GravityPointProcess:
         intensity = self.point_pattern.intensity
         return 1/(2*d*volume_unit_ball(d)*intensity)
 
-    def _pushed_point(self, k, epsilon, stop_time, p=None, q=0, correction=True):
+    def _pushed_point(self, k, epsilon, stop_time, p=None, **kwargs):
         # todo add warning p>q
+        #! kdtree not none if p not none
         point_pattern = copy.deepcopy(self.point_pattern)
         points = point_pattern.points.astype(float)
         window = point_pattern.window
@@ -58,30 +60,31 @@ class GravityPointProcess:
                 #don't consider points outside B(0, p/2)
                 # todo periodic boudary to treat well this case
                 if np.linalg.norm(x) + p < max_radius:
-                    #print(x.shape)
-                    x = x - epsilon_matrix * force_k(k=k, x=x, point_pattern=point_pattern, correction=correction, p=p, q=q)
-                    #print(x.shape)
+                    x = x - epsilon_matrix * force_k(k=k, x=x, point_pattern=point_pattern, p=p, **kwargs)
                 else:
                     x = np.atleast_2d(x)
-                    #print(x.shape)
             #using force with correction
             else:
-                x = x - epsilon_matrix * force_k(k=k, x=x, point_pattern=point_pattern, correction=correction)
+                x = x - epsilon_matrix * force_k(k=k, x=x, point_pattern=point_pattern,  **kwargs)
                 #print(x.shape)
         return x
 
-    def pushed_point_process(self, epsilon, stop_time=1, core_number=7, p=None, q=0, correction=True):
+    def pushed_point_process(self, epsilon, p=None, stop_time=1, core_number=7, correction=True, q=0):
         freeze_support()
+        if p is not None:
+            points_kd_tree = KDTree(self.point_pattern.points)
+        else:
+            points_kd_tree=None
         points_nb = self.point_pattern.points.shape[0]
         with Pool(core_number) as pool:
             new_points = pool.map(
-                partial(self._pushed_point, epsilon=epsilon, stop_time=stop_time, p=p, q=q, correction=correction),
+                partial(self._pushed_point, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q),
                 list(range(points_nb)),
             )
         return sort_output_push_point(new_points, epsilon)
 
-    def pushed_point_pattern(self, epsilon, stop_time=1, core_number=7, p=None, q=0, correction=True):
-        points = self.pushed_point_process(epsilon, stop_time, core_number, p, q, correction)
+    def pushed_point_pattern(self, epsilon, stop_time=1, core_number=7, correction=True, p=None, q=0):
+        points = self.pushed_point_process(epsilon=epsilon, stop_time=stop_time, core_number=core_number, correction=correction, p=p, q=q)
         window = self.point_pattern.window
         point_pattern_new = [PointPattern(p, window) for p in points]
         # todo code the following in more accurent way

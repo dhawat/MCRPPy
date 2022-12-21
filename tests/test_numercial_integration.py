@@ -1,6 +1,25 @@
 import numpy as np
 import pytest
-from GPPY.numerical_integration import delyon_portier_integration, kernel, leave_one_out_kernel_estimator, bandwidth_0_delyon_portier, function_test_1_delyon_portier, variance_kernel
+from GPPY.numerical_integration import delyon_portier_integration, kernel, leave_one_out_kernel_estimator, bandwidth_0_delyon_portier, function_test_1_delyon_portier, variance_kernel, monte_carlo_integration
+from structure_factor.spatial_windows import UnitBallWindow
+from GPPY.spatial_windows import AnnulusWindow
+
+
+def f_1(x):
+    #indicator ball unit window
+    d = x.shape[1]
+    window = UnitBallWindow(center=[0]*d)
+    return window.indicator_function(x)
+
+@pytest.mark.parametrize(
+    "points, expected",
+    ([np.array([[0, 0], [1, 2], [0.5, 0.2], [1, 0], [2, -1]]), 3/5 ],
+     [np.array([[0, 0, 0], [1, 2, 0], [0.5, 0.2, -0.1], [1, 0, 0], [3, 2, -1]]), 3/5 ]
+    )
+)
+def test_monte_carlo_integration(points, expected):
+    result = monte_carlo_integration(f_1, points, 1)
+    np.testing.assert_equal(result, expected)
 
 @pytest.mark.parametrize(
     "x, choice, expected",
