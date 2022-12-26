@@ -3,7 +3,7 @@ from structure_factor.spatial_windows import UnitBallWindow, BoxWindow
 import scipy as sp
 import statistics as stat
 
-def monte_carlo_integration(f, points, weights):
+def monte_carlo_integration(f, points, weights=1):
     points_nb = points.shape[0]
     return np.sum(f(points)*weights)/points_nb
 
