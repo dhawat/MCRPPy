@@ -36,7 +36,11 @@
     "editor.tabSize": 4,
     "editor.tokenColorCustomizations": null,
     "editor.wordWrap": "bounded",
-    "editor.quickSuggestions": true,
+    "editor.quickSuggestions": {
+        "comments": "on",
+        "strings": "on",
+        "other": "on"
+    },
     // native bracket pair colorization
     "editor.bracketPairColorization.enabled": true,
     "editor.guides.bracketPairs": "active",
@@ -80,7 +84,11 @@
     // Markdown
     "[markdown]": {
         "editor.tabSize": 2,
-        "editor.quickSuggestions": true,
+        "editor.quickSuggestions": {
+            "comments": "on",
+            "strings": "on",
+            "other": "on"
+        },
     },
     // RestructuredText
     "restructuredtext.confPath": "${workspaceFolder}/docs",
@@ -98,5 +106,6 @@
     "python.testing.nosetestsEnabled": false,
     "python.testing.pytestEnabled": true,
     "esbonio.sphinx.confDir": "${workspaceFolder}/docs",
+    "python.linting.flake8Enabled": true,
     // "restructuredtext.languageServer.disabled": true,
 }
