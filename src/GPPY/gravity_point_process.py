@@ -10,7 +10,6 @@ from GPPY.utils import sort_output_push_point, _sort_point_pattern, volume_unit_
 from scipy.spatial import KDTree
 from structure_factor.spatial_windows import subwindow_parameter_max
 
-
 class GravityPointProcess:
     def __init__(self, point_pattern):
         r"""Initialize StructureFactor from ``point_pattern``.
@@ -81,6 +80,7 @@ class GravityPointProcess:
                 partial(self._pushed_point, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q),
                 list(range(points_nb)),
             )
+            #pool.close()
         return sort_output_push_point(new_points, epsilon)
 
     def pushed_point_pattern(self, epsilon, stop_time=1, core_number=7, correction=True, p=None, q=0):
