@@ -18,8 +18,8 @@ def f_1(x):
     )
 )
 def test_monte_carlo_integration(points, expected):
-    result = monte_carlo_integration(f_1, points, 1)
-    np.testing.assert_equal(result, expected)
+    result = monte_carlo_integration(f=f_1,points= points)
+    np.testing.assert_array_almost_equal(result, expected)
 
 @pytest.mark.parametrize(
     "x, choice, expected",

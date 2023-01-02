@@ -3,9 +3,36 @@ from structure_factor.spatial_windows import UnitBallWindow, BoxWindow
 import scipy as sp
 import statistics as stat
 
-def monte_carlo_integration(f, points, weights=1):
+def monte_carlo_integration(points, f, weights=None):
+    if weights is None:
+        points_nb = points.shape[0]
+        weights = 1/points_nb
+    return np.sum(f(points)*weights)
+
+def importance_sampling_integration(points, f, proposal):
     points_nb = points.shape[0]
-    return np.sum(f(points)*weights)/points_nb
+    return np.sum(f(points)/proposal(points))/points_nb
+
+def control_variate_integration(points, f, proposal, mean_proposal, c):
+    points_nb = points.shape[0]
+    return np.sum(f(points) + c*(proposal(points) - mean_proposal))/points_nb
+
+
+def sobol_sequence(window, nb_points, discrepancy=False, **kwargs):
+    #https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html
+    #! add warning window should be centered box window
+    #! add test
+    d = window.dimension
+    l = np.max(np.diff(window.bounds))
+    sobol = sp.stats.qmc.Sobol(d=d, **kwargs)
+    #m = int(np.log(N)/np.log(2))
+    #points_unit_box = sobol.random_base2(m=m)
+    points_unit_box = sobol.random(n=nb_points)
+    points = (points_unit_box - 0.5)*l
+    if discrepancy:
+        return points, sp.stats.qmc.discrepancy(points_unit_box)
+    else:
+        return points
 
 def delyon_portier_integration(f, points, bandwidth, correction=False):
     nb_points = points.shape[0]
@@ -30,14 +57,17 @@ def leave_one_out_kernel_estimator(idx_out, x, points, bandwidth):
 def bandwidth_0_delyon_portier(points):
     d = points.shape[1]
     nb_points = points.shape[0]
-    sigma = stat.mean([stat.stdev(points[:,i]) for i in range(d)])
-    return sigma*((d*2**(d+5)*sp.special.gamma(d/2 + 3))/((2*d +1)*nb_points))**(1/(4+d))
+    sigma_2 = stat.mean([stat.stdev(points[:,i])**2 for i in range(d)])
+    numerator = d*2**(d+5)*sp.special.gamma(d/2 + 3)
+    denominator = (2*d +1)*nb_points
+    return np.sqrt(sigma_2)*(numerator/denominator)**(1/(4+d))
 
 def function_test_1_delyon_portier(x):
     d = x.shape[1]
     unit_box = BoxWindow([[0,1]]*d)
     support = np.array([int(unit_box.indicator_function(p) == True) for p in x])
     return np.prod(2*np.sin(np.pi*x)**2)*support
+
 def kernel(x, choice="DelPor"):
     d = x.shape[1]
     unit_ball = UnitBallWindow(center=[0]*d)

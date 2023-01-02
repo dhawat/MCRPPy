@@ -31,9 +31,9 @@ class GravityPointProcess:
         return 1 / self.point_pattern.intensity
 
     #todo the force is bigger in dimension 2. it 's divergent for infinite number of points so chose a smaller epsilon for d=2 than for higher dimension
-    @property
-    def epsilon(self):
-        return (self.allocation_basin_volume**(1/self.dimension))/100
+    #@property
+    # def epsilon(self):
+    #     return (self.allocation_basin_volume**(1/self.dimension))/100
 
     @property
     def epsilon_critical(self):
@@ -68,23 +68,27 @@ class GravityPointProcess:
                 #print(x.shape)
         return x
 
-    def pushed_point_process(self, epsilon, p=None, stop_time=1, core_number=7, correction=True, q=0):
+    def pushed_point_process(self, epsilon, p=None, stop_time=1, core_number=7, correction=True, multiprocess=True, q=0):
         freeze_support()
         if p is not None:
             points_kd_tree = KDTree(self.point_pattern.points)
         else:
             points_kd_tree=None
         points_nb = self.point_pattern.points.shape[0]
-        with Pool(core_number) as pool:
-            new_points = pool.map(
-                partial(self._pushed_point, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q),
-                list(range(points_nb)),
-            )
+
+        if multiprocess and points_nb>7000:
+            with Pool(core_number) as pool:
+                new_points = pool.map(
+                    partial(self._pushed_point, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q),
+                    list(range(points_nb)),
+                )
             #pool.close()
+        else:
+            new_points = [self._pushed_point(k, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q) for k in range(points_nb)]
         return sort_output_push_point(new_points, epsilon)
 
-    def pushed_point_pattern(self, epsilon, stop_time=1, core_number=7, correction=True, p=None, q=0):
-        points = self.pushed_point_process(epsilon=epsilon, stop_time=stop_time, core_number=core_number, correction=correction, p=p, q=q)
+    def pushed_point_pattern(self, epsilon, stop_time=1, core_number=7, correction=True, p=None, multiprocess=True, q=0):
+        points = self.pushed_point_process(epsilon=epsilon, stop_time=stop_time, core_number=core_number, correction=correction, p=p, multiprocess=multiprocess, q=q)
         window = self.point_pattern.window
         point_pattern_new = [PointPattern(p, window) for p in points]
         # todo code the following in more accurent way
