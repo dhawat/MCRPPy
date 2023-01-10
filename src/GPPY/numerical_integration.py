@@ -3,11 +3,13 @@ from structure_factor.spatial_windows import UnitBallWindow, BoxWindow
 import scipy as sp
 import statistics as stat
 import warnings
+import time
 
 def monte_carlo_integration(points, f, weights=None):
     if weights is None:
         points_nb = points.shape[0]
         weights = 1/points_nb
+    #print("f_x", f(points), "w", weights, "pod", f(points)*weights)
     return np.sum(f(points)*weights)
 
 def importance_sampling_integration(points, f, proposal):
@@ -40,7 +42,10 @@ def delyon_portier_integration(f, point_pattern, bandwidth=None, correction=Fals
     nb_points = points.shape[0]
     numerator = f(points)
     if bandwidth is None:
-        bandwidth=find_bandwidth(point_pattern, f, correction)
+        #start_time = time.time()
+        bandwidth=find_bandwidth(point_pattern, f, correction).x.item()
+        #end_time=time.time()-start_time
+        #print("Time bandwidth search=", int(end_time/60), "min", (end_time%60), "s")
     denominator = np.array([leave_one_out_kernel_estimator(i, points[i], points, bandwidth) for i in range(nb_points)])
     if correction:
         v = np.array([variance_kernel(i, points[i], points, bandwidth) for i in range(nb_points)])

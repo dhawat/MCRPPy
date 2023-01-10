@@ -68,7 +68,9 @@ class GravityPointProcess:
                 #print(x.shape)
         return x
 
-    def pushed_point_process(self, epsilon, p=None, stop_time=1, core_number=7, correction=True, multiprocess=True, q=0):
+    def pushed_point_process(self, epsilon=None, p=None, stop_time=1, core_number=7, correction=True, multiprocess=True, q=0):
+        if epsilon is None:
+            epsilon=self.epsilon_critical
         freeze_support()
         if p is not None:
             points_kd_tree = KDTree(self.point_pattern.points)
@@ -87,7 +89,7 @@ class GravityPointProcess:
             new_points = [self._pushed_point(k, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q) for k in range(points_nb)]
         return sort_output_push_point(new_points, epsilon)
 
-    def pushed_point_pattern(self, epsilon, stop_time=1, core_number=7, correction=True, p=None, multiprocess=True, q=0):
+    def pushed_point_pattern(self, epsilon=None, stop_time=1, core_number=7, correction=True, p=None, multiprocess=True, q=0):
         points = self.pushed_point_process(epsilon=epsilon, stop_time=stop_time, core_number=core_number, correction=correction, p=p, multiprocess=multiprocess, q=q)
         window = self.point_pattern.window
         point_pattern_new = [PointPattern(p, window) for p in points]
