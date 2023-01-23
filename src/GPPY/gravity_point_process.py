@@ -77,7 +77,7 @@ class GravityPointProcess:
         else:
             points_kd_tree=None
         points_nb = self.point_pattern.points.shape[0]
-
+        #todo add subwindow argument corresponding for pushing only the points contained in the subwindow. todo that find the number of points in the subwindow and change nb_points to this number in this way we are pushed the points in the subwindow
         if multiprocess and points_nb>7000:
             with Pool(core_number) as pool:
                 new_points = pool.map(
