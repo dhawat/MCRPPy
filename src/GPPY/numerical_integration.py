@@ -1,5 +1,6 @@
 import numpy as np
-from structure_factor.spatial_windows import UnitBallWindow, BoxWindow
+from structure_factor.spatial_windows import UnitBallWindow, BoxWindow, BallWindow
+from structure_factor.point_pattern import PointPattern
 import scipy as sp
 import statistics as stat
 import warnings
@@ -16,26 +17,46 @@ def importance_sampling_integration(points, f, proposal):
     points_nb = points.shape[0]
     return np.sum(f(points)/proposal(points))/points_nb
 
-def control_variate_integration(points, f, proposal, mean_proposal, c):
+def control_variate_integration(points, f, proposal, mean_proposal, c=None):
     points_nb = points.shape[0]
-    return np.sum(f(points) + c*(proposal(points) - mean_proposal))/points_nb
+    if c is None:
+        c= estimate_control_variate_parameter(points, f, proposal)
+    return np.sum(f(points) - c*(proposal(points) - mean_proposal))/points_nb
 
+
+def estimate_control_variate_parameter(points, f, proposal):
+    mean_f = stat.mean(f(points))
+    mean_proposal = stat.mean(proposal(points))
+    a  = proposal(points) - mean_proposal
+    numerator = sum((f(points)-mean_f)*a)
+    denominator = sum(a**2)
+    return numerator/denominator
 
 def sobol_sequence(window, nb_points, discrepancy=False, **kwargs):
     #https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html
     #! add warning window should be centered box window
     #! add test
+    sobol_pp = sobol_point_pattern(window, nb_points, discrepancy, **kwargs)
+    return sobol_pp.points
+
+def sobol_point_pattern(window, nb_points, discrepancy=False, **kwargs):
     d = window.dimension
-    l = np.max(np.diff(window.bounds))
+    if isinstance(window, BoxWindow):
+        l = np.max(np.diff(window.bounds))
+    elif isinstance(window, BallWindow):
+        l = 2*window.radius
+        nb_points = int(nb_points/window.volume*(l**d))
     sobol = sp.stats.qmc.Sobol(d=d, **kwargs)
     #m = int(np.log(N)/np.log(2))
     #points_unit_box = sobol.random_base2(m=m)
     points_unit_box = sobol.random(n=nb_points)
     points = (points_unit_box - 0.5)*l
+    sobol_pp = PointPattern(points, window).restrict_to_window(window)
     if discrepancy:
-        return points, sp.stats.qmc.discrepancy(points_unit_box)
+        return sobol_pp, sp.stats.qmc.discrepancy(points_unit_box)
     else:
-        return points
+        return sobol_pp
+
 
 def delyon_portier_integration(f, point_pattern, bandwidth=None, correction=False):
     points = point_pattern.points
