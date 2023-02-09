@@ -2,11 +2,10 @@ import numpy as np
 from GPPY.utils import volume_unit_ball
 from scipy.spatial import KDTree
 
-from numba import jit
+#from numba import jit
 import copy
 import matplotlib as plt
-from structure_factor.spatial_windows import BallWindow
-from GPPY.spatial_windows import AnnulusWindow
+from GPPY.spatial_windows import BallWindow, AnnulusWindow
 
 #@jit(nopython=True)
 #todo try to compute the pairwise distance of all points once each time this matrix will contains all the needed distances for this step in time. In the code below we compute each distance twice. consider function which decide between paralellizing and vectorizing (matrix of force) depending on the complexity for the number of points and the steps in time
@@ -70,7 +69,7 @@ def force_homogeneous(x, point_pattern, correction=True, p=None, kd_tree=None, q
             idx_points_in_window = [i if i<k else i-1 for i in idx_points_in_window_] #kd tree is built on all points (without removing k)
             points = points[idx_points_in_window]
         else:
-            #! add warning that this method may full memory while using multiprocessing?
+            #! add warning that this method may have memory problems while using multiprocessing?
             window = AnnulusWindow(center=x.ravel(), large_radius=p, small_radius=q)
             idx_points_in_window = window.indicator_function(points)
             points = points[idx_points_in_window]

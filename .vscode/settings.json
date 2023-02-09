@@ -74,7 +74,7 @@
     "python.condaPath": "~/opt/anaconda3/bin/anaconda",
     "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
     "python.formatting.provider": "black",
-    "python.linting.enabled": true,
+    "python.linting.enabled": false,
     "python.linting.lintOnSave": true,
     "python.terminal.activateEnvironment": false,
     // Need "sphinx.ext.napoleon" extension in docs/conf.py
@@ -106,6 +106,7 @@
     "python.testing.nosetestsEnabled": false,
     "python.testing.pytestEnabled": true,
     "esbonio.sphinx.confDir": "${workspaceFolder}/docs",
-    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Enabled": false,
+    "python.linting.pycodestyleEnabled": true,
     // "restructuredtext.languageServer.disabled": true,
 }

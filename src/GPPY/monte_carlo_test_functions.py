@@ -1,4 +1,4 @@
-from structure_factor.spatial_windows import BallWindow, BoxWindow, UnitBallWindow
+from GPPY.spatial_windows import BallWindow, BoxWindow, UnitBallWindow
 import math
 import numpy as np
 
@@ -147,15 +147,15 @@ def cv_proposal_f_5(d):
 #         print("test failed, f_5(x)=", f_5(x), "expected=", expected)
 # test_f_5()
 
-def f_8(x):
-    N, d = x.shape
-    results = np.zeros((N,))
-    support = support_integrands(d)
-    for n in range(N):
-        results[n] = 1 if x[n,0]<np.min(x[n,1:]) else 0
-    return results*indicator(x, support)
-def exact_integral_f_8(d):
-    return 1/d
+# def f_8(x):
+#     N, d = x.shape
+#     results = np.zeros((N,))
+#     support = support_integrands(d)
+#     for n in range(N):
+#         results[n] = 1 if x[n,0]<np.min(x[n,1:]) else 0
+#     return results*indicator(x, support)
+# def exact_integral_f_8(d):
+#     return 1/d
 
 #control variate setup for f_8
 
@@ -170,16 +170,21 @@ def exact_integral_f_8(d):
 # test_f_8()
 
 
-def f_6(x, a=10):
+def f_6(x, a=10, c=10):
     _, d = x.shape
     support = support_integrands(d)
-    return np.prod(np.sin(a*math.pi*x), axis=1)*indicator(x, support)
+    return c*np.prod(np.sin(a*math.pi*x), axis=1)*indicator(x, support)
 def exact_integral_f_6(d):
     return 0
 
-def f_7(x, a=10):
+def f_7(x, a=10, c=10):
     _, d = x.shape
     support = support_integrands(d)
-    return np.prod(np.cos(a*math.pi*x), axis=1)*indicator(x, support)
+    return c*np.prod(np.cos(a*math.pi*x), axis=1)*indicator(x, support)
 def exact_integral_f_7(d):
     return 0
+
+def f_8(x, a=15, c=10):
+    return f_7(x, a,c)
+def exact_integral_f_8(d, a=15,c=10):
+    return -c*(2/(math.pi*a))**d

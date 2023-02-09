@@ -8,13 +8,14 @@ from GPPY.numerical_integration import (monte_carlo_integration,
                                         delyon_portier_integration,
                                        bandwidth_0_delyon_portier)
 import statistics as stat
+from scipy import stats
 from sklearn.linear_model import LinearRegression
 import numpy as np
 import pandas as pd
 import time
 import matplotlib.pyplot as plt
-from structure_factor.spatial_windows import BallWindow, BoxWindow
-from structure_factor.point_pattern import PointPattern
+from GPPY.spatial_windows import BallWindow, BoxWindow
+from GPPY.point_pattern import PointPattern
 from GPPY.monte_carlo_test_functions import (f_1, f_2, f_3, f_4, f_5, f_6,f_7, f_8,
                                              exact_integral_f_1,
                                              exact_integral_f_2,
@@ -32,7 +33,7 @@ from GPPY.monte_carlo_test_functions import (f_1, f_2, f_3, f_4, f_5, f_6,f_7, f
                                              )
 
 
-def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimators=None):
+def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimators=None, add_r_push=None, **kwargs):
 
     if estimators is None:
         estimators = ["MC", "MCR", "MCP", "MCPS", "MCDPP",
@@ -58,7 +59,7 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
         # Push Binomial
         ## Push Binomial pp
         time_start1 = time.time()
-        push_pp = samples_push(d, support_window=support_window, nb_point=n, nb_sample=nb_sample)
+        push_pp = samples_push(d, support_window=support_window, nb_point=n, nb_sample=nb_sample, add_r=add_r_push, **kwargs)
         time_end = time.time() - time_start1
         time_mc["MCP"]=[int(time_end/60), (time_end%60)]
         nb_point_output= int(stat.mean([p.points.shape[0] for p in push_pp]))
@@ -70,7 +71,7 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
             # Push Sobol
             ## Push Sobol pp
             time_start1 = time.time()
-            push_sobol_pp = samples_push(d, support_window=support_window, nb_point=n, nb_sample=nb_sample, father_type="Sobol")
+            push_sobol_pp = samples_push(d, support_window=support_window, nb_point=n, nb_sample=nb_sample, father_type="Sobol", add_r=add_r_push, **kwargs)
             nb_point_output_sobol= int(stat.mean([p.points.shape[0] for p in push_sobol_pp]))
             time_end = time.time() - time_start1
             time_mc["MCPS"]=[int(time_end/60), (time_end%60)]
@@ -256,13 +257,13 @@ def mc_n_samples( pp_list, type_mc, mc_f_n=None, nb_function=5,
             print("MSE=", mse(m_list, std_list, integ_f))
     return mc_f_n
 
-def samples_push(d, support_window, nb_point, nb_sample, father_type="Binomial", multiprocess=True):
+def samples_push(d, support_window, nb_point, nb_sample, father_type="Binomial", add_r=None, **kwargs):
     time_start = time.time()
     if father_type =="Binomial":
-        father_pp_list = _binomial_pp_ball(d, window=support_window, nb_point=nb_point, nb_sample=nb_sample)
+        father_pp_list = _binomial_pp_ball(d, window=support_window, nb_point=nb_point, nb_sample=nb_sample, add_r=add_r)
     elif father_type =="Sobol":
-        father_pp_list = _sobol_pp_ball(d, window=support_window, nb_point=nb_point, nb_sample=nb_sample)
-        print("herere", len(father_pp_list))
+        father_pp_list = _sobol_pp_ball(d, window=support_window, nb_point=nb_point, nb_sample=nb_sample, add_r=add_r)
+        #print("herere", len(father_pp_list))
     else:
         raise ValueError("type are Binomial and Sobol")
     gpp_pp = [GravityPointProcess(p) for p in father_pp_list]
@@ -271,7 +272,7 @@ def samples_push(d, support_window, nb_point, nb_sample, father_type="Binomial",
           ", N expected =", nb_point, ", Epsilon=", epsilon_0)
     #time_start = time.time()
     push_pp_big = [g.pushed_point_pattern(epsilon=epsilon_0,
-                                            multiprocess=multiprocess)
+                                            **kwargs)
                     for g in gpp_pp]
     push_pp = [g.restrict_to_window(support_window) for g in push_pp_big]
     time_end = time.time() - time_start
@@ -279,7 +280,7 @@ def samples_push(d, support_window, nb_point, nb_sample, father_type="Binomial",
     return push_pp
 
 #! done
-def _binomial_pp_ball(d, window, nb_point, nb_sample, epsilon=None):
+def _binomial_pp_ball(d, window, nb_point, nb_sample, add_r=None):
     r"""Binomial in a ball of radius r containing window, used to obtaine a pushed binomial process.
     r = smallest r possible + epsilon
     """
@@ -288,9 +289,11 @@ def _binomial_pp_ball(d, window, nb_point, nb_sample, epsilon=None):
         r=math.sqrt(d*(l/2)**2) #radius ball window containing box_window
     elif isinstance(window, BallWindow):
         r = window.radius
-    if epsilon is None:
-        epsilon=r
-    r += epsilon
+    else:
+        print("Restart kernel")
+    if add_r is None:
+        add_r=r
+    r += add_r
     rho = nb_point/window.volume
     simu_window = BallWindow(center=[0]*d, radius=r) #simulation window
     simu_nb_point = int(rho*simu_window.volume) #simulation nb points
@@ -342,15 +345,18 @@ def abs_error(approx, exact):
 
 def regression_line(x, y, log=True):
     if log:
-        x = np.log([x]).T
-        y = np.log([y]).T
+        x = np.log(x)
+        y = np.log(y)
     else:
-        x = np.array(x).T
-        y = np.array(y).T
-    reg = LinearRegression().fit(x, y)
-    slope = reg.coef_
-    reg_line = x*slope + reg.intercept_
-    return reg_line, slope
+        x = np.array(x)
+        y = np.array(y)
+    #reg = LinearRegression().fit(x, y)
+    #slope = reg.coef_
+    reg_fit = stats.linregress(x,y)
+    slope = reg_fit.slope
+    std_slope = reg_fit.stderr
+    reg_line = x*slope + reg_fit.intercept
+    return reg_line, slope, std_slope
 
 def mc_f_dict(type_mc):
     d = {}
@@ -358,20 +364,25 @@ def mc_f_dict(type_mc):
     d["std_"+type_mc]=[]
     return d
 
-def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_fig=None):
+def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_fig=None, plot_dim=2):
     log_nb_pts = np.log([nb_point_list]).T
     nb_function = len(mc_list["MC"])
     type_mc = mc_list.keys()
-    x = np.linspace(-1,1, 60)
+    x = np.linspace(-1,1, 600)
     X, Y = np.meshgrid(x, x)
     points = np.array([X.ravel(), Y.ravel()]).T
     col = ["b", "k", "g", "m", "gray", "c","y", "darkred", "orange", "pink"]
+    fig= plt.figure(figsize=(16,int(4*nb_function)))
     for j in range(1, nb_function+1) :
-        z_f = globals()["f_{}".format(j)](points)
-        fig= plt.figure(figsize=(14,18))
         #plot
-        ax = fig.add_subplot(nb_function, 3, 1+ 3*(j-1), projection='3d')
-        ax.scatter3D(X.ravel(), Y.ravel(), z_f, c=z_f)
+        if plot_dim==2:
+            z_f = globals()["f_{}".format(j)](points)
+            ax = fig.add_subplot(nb_function, 3, 1+ 3*(j-1), projection='3d')
+            ax.scatter3D(X.ravel(), Y.ravel(), z_f, c=z_f)
+        elif plot_dim==1:
+            y_f = globals()["f_{}".format(j)](np.atleast_2d(x).T)
+            ax = fig.add_subplot(nb_function, 3, 1+ 3*(j-1))
+            ax.plot(x, y_f)
         ax.set_title(r"$f_%s$"%j)
         #std
         ax = fig.add_subplot(nb_function, 3, 2+ 3*(j-1))
@@ -379,10 +390,12 @@ def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_f
         for t in type_mc:
             if t!="MCCV" or j<6:
                 std_f = mc_list[t]["mc_results_f_{}".format(j)]["std_"+ t]
-                reg_line, slope = regression_line(nb_point_list, std_f)
-                label_with_slope = t+", slope={0:.3f}".format(slope.item())
+                reg_line, slope, std_reg = regression_line(nb_point_list, std_f)
+                label_with_slope = t+": slope={0:.2f}".format(slope)+ ", std={0:.2f}".format(std_reg)
                 ax.scatter(log_nb_pts, np.log(std_f), c=col[i],s=1, label=label_with_slope)
                 ax.plot(log_nb_pts, reg_line, c=col[i])
+                ax.plot(log_nb_pts, reg_line + 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
+                ax.plot(log_nb_pts, reg_line - 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
                 i=i+1
         ax.set_title("std (d=%s)" %d)
         ax.set_xlabel(r"$\log(N)$")
@@ -412,7 +425,7 @@ def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_f
         ax.legend()
         plt.tight_layout()
     if save_fig is not None:
-        fig.savefig(save_fig)
+        fig.savefig(save_fig, bbox_inches='tight')
     plt.show()
     return ax
 
