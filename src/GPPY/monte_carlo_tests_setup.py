@@ -250,10 +250,14 @@ def mc_n_samples( pp_list, type_mc, mc_f_n=None, nb_function=5,
         mc_f_n["mc_results_f_{}".format(i)]["m_"+ type_mc].append(stat.mean(mc_values))
         mc_f_n["mc_results_f_{}".format(i)]["std_"+ type_mc].append(stat.stdev(mc_values))
         m_list = mc_f_n["mc_results_f_{}".format(i)]["m_"+ type_mc]
+        mc_f_n["mc_results_f_{}".format(i)]["se_"+ type_mc].append(error(mc_values, integ_f)**2)
         std_list = mc_f_n["mc_results_f_{}".format(i)]["std_"+ type_mc]
+        se_list = mc_f_n["mc_results_f_{}".format(i)]["se_"+ type_mc]
         if verbose:
             print("FOR f%s"%i)
-            print("bias=", error(m_list, integ_f), ", std=", std_list,)
+            print(
+                #"bias_suqare=", se_list,
+                  ", std=", std_list,)
             print("MSE=", mse(m_list, std_list, integ_f))
     return mc_f_n
 
@@ -340,6 +344,10 @@ def mse(mean, std, exact):
     bias_square = np.square(error(mean, exact))
     return var + bias_square
 
+# def pd_square_error(N, approx, exact):
+#     se = approx - exact
+#     return (pd.DataFrame({"{}".format(N): se}))
+
 def abs_error(approx, exact):
     return np.atleast_2d(np.abs(error(approx, exact)))
 
@@ -358,13 +366,15 @@ def regression_line(x, y, log=True):
     reg_line = x*slope + reg_fit.intercept
     return reg_line, slope, std_slope
 
-def mc_f_dict(type_mc):
+def mc_f_dict(type_mc, se=True):
     d = {}
     d["m_"+type_mc]=[]
     d["std_"+type_mc]=[]
+    if se:
+        d["se_"+type_mc]=[]
     return d
 
-def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_fig=None, plot_dim=2):
+def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_fig=None, plot_dim=2, error_type="SE"):
     log_nb_pts = np.log([nb_point_list]).T
     nb_function = len(mc_list["MC"])
     type_mc = mc_list.keys()
@@ -392,10 +402,10 @@ def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_f
                 std_f = mc_list[t]["mc_results_f_{}".format(j)]["std_"+ t]
                 reg_line, slope, std_reg = regression_line(nb_point_list, std_f)
                 label_with_slope = t+": slope={0:.2f}".format(slope)+ ", std={0:.2f}".format(std_reg)
-                ax.scatter(log_nb_pts, np.log(std_f), c=col[i],s=1, label=label_with_slope)
+                ax.scatter(log_nb_pts, np.log(std_f), c=col[i],s=3, label=label_with_slope)
                 ax.plot(log_nb_pts, reg_line, c=col[i])
-                ax.plot(log_nb_pts, reg_line + 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
-                ax.plot(log_nb_pts, reg_line - 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
+                #ax.plot(log_nb_pts, reg_line + 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
+                #ax.plot(log_nb_pts, reg_line - 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
                 i=i+1
         ax.set_title("std (d=%s)" %d)
         ax.set_xlabel(r"$\log(N)$")
@@ -407,21 +417,35 @@ def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_f
         for t in type_mc:
             integ_f = globals()["exact_integral_f_{}".format(j)](d)
             if t!="MCCV" or j<6:
-                m_f = mc_list[t]["mc_results_f_{}".format(j)]["m_"+ t]
-                std_f = mc_list[t]["mc_results_f_{}".format(j)]["std_"+ t]
-                mse_f = mse(m_f, std_f, integ_f)
-                err_bar = np.array(std_f/np.sqrt(nb_sample))
-                if log_scale:
-                    ax.loglog(np.array(nb_point_list) +25*i, mse_f, c=col[i], marker=".", label=t)
-                else:
-                    ax.plot(np.array(nb_point_list) +25*i, mse_f, c=col[i], marker=".", label=t)
-                ax.errorbar(x=np.array(nb_point_list) +25*i, y=mse_f, yerr=3 *err_bar,
-                             color=col[i], capsize=4, capthick=1, elinewidth=6)
+                if error_type=="MSE":
+                    m_f = mc_list[t]["mc_results_f_{}".format(j)]["m_"+ t]
+                    std_f = mc_list[t]["mc_results_f_{}".format(j)]["std_"+ t]
+                    mse_f = mse(m_f, std_f, integ_f)
+                    err_bar = np.array(std_f/np.sqrt(nb_sample))
+                    if log_scale:
+                        ax.loglog(np.array(nb_point_list) +25*i, mse_f, c=col[i], marker=".", label=t)
+                    else:
+                        ax.plot(np.array(nb_point_list) +25*i, mse_f, c=col[i], marker=".", label=t)
+                    ax.errorbar(x=np.array(nb_point_list) +25*i, y=mse_f, yerr=3 *err_bar,
+                                color=col[i], capsize=4, capthick=1, elinewidth=6)
+                if error_type=="SE":
+                    se_f = mc_list[t]["mc_results_f_{}".format(j)]["se_"+ t]
+                    x = np.array(nb_point_list) +25*i
+                    nb_list_expended = [[n]*len(e) for n,e in zip(nb_point_list, se_f)]
+                    ax.scatter(np.array(nb_list_expended) +25*i, se_f, c=col[i], s=0.1, label=t)
+                    a = ax.boxplot(se_f, positions=x.tolist(),
+                               widths = 30,
+                               manage_ticks=False,
+                               patch_artist=True, boxprops=dict(facecolor=col[i]),
+                               sym='')
+                    #ax.legend([a["boxes"][0]], [t], loc='lower left')
             i=i+1
-
-        ax.set_title("MSE (d=%s)" %d)
+        if log_scale:
+            #ax.set_xscale("log")
+            ax.set_yscale("log")
+        ax.set_title("Square error (d=%s)" %d)
         ax.set_xlabel(r"$N$")
-        ax.set_ylabel(r"$MSE$")
+        ax.set_ylabel(r"$SE$")
         ax.legend()
         plt.tight_layout()
     if save_fig is not None:
