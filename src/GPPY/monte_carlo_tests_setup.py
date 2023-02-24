@@ -375,83 +375,25 @@ def mc_f_dict(type_mc, se=True):
     return d
 
 def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_fig=None, plot_dim=2, error_type="SE"):
-    log_nb_pts = np.log([nb_point_list]).T
     nb_function = len(mc_list["MC"])
     type_mc = mc_list.keys()
-    x = np.linspace(-1,1, 600)
-    X, Y = np.meshgrid(x, x)
-    points = np.array([X.ravel(), Y.ravel()]).T
-    col = ["b", "k", "g", "m", "gray", "c","y", "darkred", "orange", "pink"]
+    nb_column=3
+    color_list = ["b", "k", "g", "m", "gray", "c","y", "darkred", "orange", "pink"]
     fig= plt.figure(figsize=(16,int(4*nb_function)))
     for j in range(1, nb_function+1) :
         #plot
-        if plot_dim==2:
-            z_f = globals()["f_{}".format(j)](points)
-            ax = fig.add_subplot(nb_function, 3, 1+ 3*(j-1), projection='3d')
-            ax.scatter3D(X.ravel(), Y.ravel(), z_f, c=z_f)
-        elif plot_dim==1:
-            y_f = globals()["f_{}".format(j)](np.atleast_2d(x).T)
-            ax = fig.add_subplot(nb_function, 3, 1+ 3*(j-1))
-            ax.plot(x, y_f)
-        ax.set_title(r"$f_%s$"%j)
+        add_plot_functions(fig, nb_function, plot_dim, idx_row=j, nb_column=nb_column)
         #std
-        ax = fig.add_subplot(nb_function, 3, 2+ 3*(j-1))
-        i=0
-        for t in type_mc:
-            if t!="MCCV" or j<6:
-                std_f = mc_list[t]["mc_results_f_{}".format(j)]["std_"+ t]
-                reg_line, slope, std_reg = regression_line(nb_point_list, std_f)
-                label_with_slope = t+": slope={0:.2f}".format(slope)+ ", std={0:.2f}".format(std_reg)
-                ax.scatter(log_nb_pts, np.log(std_f), c=col[i],s=3, label=label_with_slope)
-                ax.plot(log_nb_pts, reg_line, c=col[i])
-                #ax.plot(log_nb_pts, reg_line + 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
-                #ax.plot(log_nb_pts, reg_line - 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
-                i=i+1
-        ax.set_title("std (d=%s)" %d)
-        ax.set_xlabel(r"$\log(N)$")
-        ax.set_ylabel(r"$\log(std)$")
-        ax.legend()
+        ax = fig.add_subplot(nb_function, nb_column, 2+ nb_column*(j-1))
+        add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row=j)
         #MSE
         ax = fig.add_subplot(nb_function, 3, 3+ 3*(j-1))
-        i=0
-        for t in type_mc:
-            integ_f = globals()["exact_integral_f_{}".format(j)](d)
-            if t!="MCCV" or j<6:
-                if error_type=="MSE":
-                    m_f = mc_list[t]["mc_results_f_{}".format(j)]["m_"+ t]
-                    std_f = mc_list[t]["mc_results_f_{}".format(j)]["std_"+ t]
-                    mse_f = mse(m_f, std_f, integ_f)
-                    err_bar = np.array(std_f/np.sqrt(nb_sample))
-                    if log_scale:
-                        ax.loglog(np.array(nb_point_list) +25*i, mse_f, c=col[i], marker=".", label=t)
-                    else:
-                        ax.plot(np.array(nb_point_list) +25*i, mse_f, c=col[i], marker=".", label=t)
-                    ax.errorbar(x=np.array(nb_point_list) +25*i, y=mse_f, yerr=3 *err_bar,
-                                color=col[i], capsize=4, capthick=1, elinewidth=6)
-                if error_type=="SE":
-                    se_f = mc_list[t]["mc_results_f_{}".format(j)]["se_"+ t]
-                    x = np.array(nb_point_list) +25*i
-                    nb_list_expended = [[n]*len(e) for n,e in zip(nb_point_list, se_f)]
-                    ax.scatter(np.array(nb_list_expended) +25*i, se_f, c=col[i], s=0.1, label=t)
-                    a = ax.boxplot(se_f, positions=x.tolist(),
-                               widths = 30,
-                               manage_ticks=False,
-                               patch_artist=True, boxprops=dict(facecolor=col[i]),
-                               sym='')
-                    #ax.legend([a["boxes"][0]], [t], loc='lower left')
-            i=i+1
-        if log_scale:
-            #ax.set_xscale("log")
-            ax.set_yscale("log")
-        ax.set_title("Square error (d=%s)" %d)
-        ax.set_xlabel(r"$N$")
-        ax.set_ylabel(r"$SE$")
-        ax.legend()
+        add_plot_error(d, ax, mc_list, type_mc, nb_sample, nb_point_list, error_type, color_list, idx_row=j, log_scale=log_scale)
         plt.tight_layout()
     if save_fig is not None:
         fig.savefig(save_fig, bbox_inches='tight')
     plt.show()
-    return ax
+    #return ax
 
 
 # def test_jaccobi_measure():
@@ -463,3 +405,73 @@ def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_f
 #         print("test succeeded")
 #     else:
 #         print("test failed, error=", jaccobi_measure(x,jac_params)- expected)
+
+def add_plot_functions(fig, nb_function, plot_dim, idx_row, nb_column):
+    x = np.linspace(-1,1, 100)
+    X, Y = np.meshgrid(x, x)
+    points = np.array([X.ravel(), Y.ravel()]).T
+    if plot_dim==2:
+        z_f = globals()["f_{}".format(idx_row)](points)
+        #print("Hello", z_f)
+        ax = fig.add_subplot(nb_function, nb_column, 1+ nb_column*(idx_row-1), projection='3d')
+        ax.scatter3D(X.ravel(), Y.ravel(), z_f, c=z_f)
+    elif plot_dim==1:
+        y_f = globals()["f_{}".format(idx_row)](np.atleast_2d(x).T)
+        ax = fig.add_subplot(nb_function, nb_column, 1+ nb_column*(idx_row-1))
+        ax.plot(x, y_f)
+    ax.set_title(r"$f_%s$"%idx_row)
+
+def add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row):
+    log_nb_pts = np.log([nb_point_list]).T
+    type_mc = mc_list.keys()
+    i=0
+    for t in type_mc:
+        if t!="MCCV" or idx_row<6:
+            std_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["std_"+ t]
+            reg_line, slope, std_reg = regression_line(nb_point_list, std_f)
+            label_with_slope = t+": slope={0:.2f}".format(slope)+ ", std={0:.2f}".format(std_reg)
+            ax.scatter(log_nb_pts, np.log(std_f), c=color_list[i],s=3, label=label_with_slope)
+            ax.plot(log_nb_pts, reg_line, c=color_list[i])
+            #ax.plot(log_nb_pts, reg_line + 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
+            #ax.plot(log_nb_pts, reg_line - 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
+            i=i+1
+    ax.set_title("std (d=%s)" %d)
+    ax.set_xlabel(r"$\log(N)$")
+    ax.set_ylabel(r"$\log(std)$")
+    ax.legend()
+
+def add_plot_error(d, ax, mc_list, type_mc, nb_sample, nb_point_list, error_type, color_list, idx_row, log_scale):
+    i=0
+    for t in type_mc:
+        integ_f = globals()["exact_integral_f_{}".format(idx_row)](d)
+        if t!="MCCV" or idx_row<6:
+            if error_type=="MSE":
+                m_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["m_"+ t]
+                std_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["std_"+ t]
+                mse_f = mse(m_f, std_f, integ_f)
+                err_bar = np.array(std_f/np.sqrt(nb_sample))
+                if log_scale:
+                    ax.loglog(np.array(nb_point_list) +25*i, mse_f, c=color_list[i], marker=".", label=t)
+                else:
+                    ax.plot(np.array(nb_point_list) +25*i, mse_f, c=color_list[i], marker=".", label=t)
+                ax.errorbar(x=np.array(nb_point_list) +25*i, y=mse_f, yerr=3 *err_bar,
+                            color=color_list[i], capsize=4, capthick=1, elinewidth=6)
+            if error_type=="SE":
+                se_f = mc_list[t]["mc_results_f_{}".format(j)]["se_"+ t]
+                x = np.array(nb_point_list) +25*i
+                nb_list_expended = [[n]*len(e) for n,e in zip(nb_point_list, se_f)]
+                ax.scatter(np.array(nb_list_expended) +25*i, se_f, c=color_list[i], s=0.1, label=t)
+                ax.boxplot(se_f, positions=x.tolist(),
+                            widths = 30,
+                            manage_ticks=False,
+                            patch_artist=True, boxprops=dict(facecolor=color_list[i]),
+                            sym='')
+                #ax.legend([a["boxes"][0]], [t], loc='lower left')
+        i=i+1
+    if log_scale:
+        #ax.set_xscale("log")
+        ax.set_yscale("log")
+    ax.set_title("Square error (d=%s)" %d)
+    ax.set_xlabel(r"$N$")
+    ax.set_ylabel(r"$SE$")
+    ax.legend()
