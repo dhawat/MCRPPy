@@ -16,20 +16,13 @@ import time
 import matplotlib.pyplot as plt
 from GPPY.spatial_windows import BallWindow, BoxWindow
 from GPPY.point_pattern import PointPattern
-from GPPY.monte_carlo_test_functions import (f_1, f_2, f_3, f_4, f_5, f_6,f_7, f_8,
+from GPPY.monte_carlo_test_functions import (f_1, f_2, f_3, f_4,
+                                             f_5,
                                              exact_integral_f_1,
                                              exact_integral_f_2,
                                              exact_integral_f_3,
                                              exact_integral_f_4,
-                                             exact_integral_f_5,
-                                             exact_integral_f_6,
-                                             exact_integral_f_7,
-                                             exact_integral_f_8,
-                                             cv_proposal_f_5,
-                                             cv_proposal_f_4,
-                                             cv_proposal_f_3,
-                                             cv_proposal_f_2,
-                                             cv_proposal_f_1,
+                                             exact_integral_f_5
                                              )
 
 
@@ -204,7 +197,7 @@ def dataframe_mse_results(d, mc_results, nb_function, nb_sample, idx_nb_point=-1
             if t!="MCCV" or j<6:
                 m_f = mc_results[t]["mc_results_f_{}".format(j)]["m_"+ t]
                 std_f = mc_results[t]["mc_results_f_{}".format(j)]["std_"+ t]
-                mse_f = mse(m_f, std_f, integ_f)
+                mse_f = mse(m_f, std_f, integ_f, verbose=False)
                 std_mse = np.array(std_f/np.sqrt(nb_sample))
                 mse_dict["MSE(f_{})".format(j)][t] = mse_f[idx_nb_point]
                 mse_dict["std(MSE(f_{}))".format(j)][t] = std_mse[idx_nb_point]
@@ -247,17 +240,19 @@ def mc_n_samples( pp_list, type_mc, mc_f_n=None, nb_function=5,
         else:
             raise ValueError("Wrong MC type.")
         #print(mc_f_n["mc_results_f_{}".format(i)].keys(), type_mc)
+        mean_mc = stat.mean(mc_values)
         mc_f_n["mc_results_f_{}".format(i)]["m_"+ type_mc].append(stat.mean(mc_values))
-        mc_f_n["mc_results_f_{}".format(i)]["std_"+ type_mc].append(stat.stdev(mc_values))
+        var_mc = stat.mean((mc_values - mean_mc)**2)
+        mc_f_n["mc_results_f_{}".format(i)]["std_"+ type_mc].append(math.sqrt(var_mc))
         m_list = mc_f_n["mc_results_f_{}".format(i)]["m_"+ type_mc]
-        mc_f_n["mc_results_f_{}".format(i)]["se_"+ type_mc].append(error(mc_values, integ_f)**2)
+        mc_f_n["mc_results_f_{}".format(i)]["se_"+ type_mc].append(square_error(mc_values, integ_f))
         std_list = mc_f_n["mc_results_f_{}".format(i)]["std_"+ type_mc]
-        se_list = mc_f_n["mc_results_f_{}".format(i)]["se_"+ type_mc]
+        #se_list = mc_f_n["mc_results_f_{}".format(i)]["se_"+ type_mc]
         if verbose:
             print("FOR f%s"%i)
-            print(
+            #print(
                 #"bias_suqare=", se_list,
-                  ", std=", std_list,)
+                  #", std=", std_list)
             print("MSE=", mse(m_list, std_list, integ_f))
     return mc_f_n
 
@@ -336,20 +331,20 @@ def jaccobi_measure(x, jac_params):
     return result*support
 
 
-def error(approx, exact):
-    return np.array(approx) - exact
+def square_error(approx, exact):
+    return np.square(np.array(approx) - exact)
 
-def mse(mean, std, exact):
+def mse(mean, std, exact, verbose=True):
+    #print(mean)
     var = np.square(std)
-    bias_square = np.square(error(mean, exact))
+    bias_square = np.square(np.array(mean)- exact)
+    if verbose:
+        print( "Bias=", bias_square, "Var=", var)
     return var + bias_square
 
 # def pd_square_error(N, approx, exact):
 #     se = approx - exact
 #     return (pd.DataFrame({"{}".format(N): se}))
-
-def abs_error(approx, exact):
-    return np.atleast_2d(np.abs(error(approx, exact)))
 
 def regression_line(x, y, log=True):
     if log:
@@ -364,7 +359,11 @@ def regression_line(x, y, log=True):
     slope = reg_fit.slope
     std_slope = reg_fit.stderr
     reg_line = x*slope + reg_fit.intercept
-    return reg_line, slope, std_slope
+    #Kolmogorov-Smirnov test on the resedual of linear regressian to determine if it came from a normal distribution
+    residual = y - reg_line # residual r = y - estimated_y
+    ks_result = stats.kstest(residual, 'norm')
+    return reg_line, slope, std_slope, ks_result
+
 
 def mc_f_dict(type_mc, se=True):
     d = {}
@@ -395,7 +394,18 @@ def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_f
     plt.show()
     #return ax
 
-
+def data_frame_ks_test_residual(mc_list, nb_point_list):
+    ks_test_dict = {}
+    nb_function = len(mc_list["MC"])
+    type_mc = mc_list.keys()
+    for j in range(1, nb_function+1) :
+        ks_test_f_dict = {}
+        for t in type_mc:
+            std_f = mc_list[t]["mc_results_f_{}".format(j)]["std_"+ t]
+            _, _, _, ks_test = regression_line(nb_point_list, std_f)
+            ks_test_f_dict[t] =  ("stat={0:.3f}".format(ks_test[0]), "p={0:.3}".format(ks_test[1]))
+        ks_test_dict["f_{}".format(j)] = ks_test_f_dict
+    return pd.DataFrame(ks_test_dict)
 # def test_jaccobi_measure():
 #     x = np.array([[1, 1/2, 0], [1/2, 0, 0], [0, 1.1, 0]])
 #     #x= np.array([ [1/2, 0, 0]])
@@ -428,7 +438,7 @@ def add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row):
     for t in type_mc:
         if t!="MCCV" or idx_row<6:
             std_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["std_"+ t]
-            reg_line, slope, std_reg = regression_line(nb_point_list, std_f)
+            reg_line, slope, std_reg, _ = regression_line(nb_point_list, std_f)
             label_with_slope = t+": slope={0:.2f}".format(slope)+ ", std={0:.2f}".format(std_reg)
             ax.scatter(log_nb_pts, np.log(std_f), c=color_list[i],s=3, label=label_with_slope)
             ax.plot(log_nb_pts, reg_line, c=color_list[i])
@@ -448,7 +458,7 @@ def add_plot_error(d, ax, mc_list, type_mc, nb_sample, nb_point_list, error_type
             if error_type=="MSE":
                 m_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["m_"+ t]
                 std_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["std_"+ t]
-                mse_f = mse(m_f, std_f, integ_f)
+                mse_f = mse(m_f, std_f, integ_f, verbose=False)
                 err_bar = np.array(std_f/np.sqrt(nb_sample))
                 if log_scale:
                     ax.loglog(np.array(nb_point_list) +25*i, mse_f, c=color_list[i], marker=".", label=t)
@@ -457,7 +467,7 @@ def add_plot_error(d, ax, mc_list, type_mc, nb_sample, nb_point_list, error_type
                 ax.errorbar(x=np.array(nb_point_list) +25*i, y=mse_f, yerr=3 *err_bar,
                             color=color_list[i], capsize=4, capthick=1, elinewidth=6)
             if error_type=="SE":
-                se_f = mc_list[t]["mc_results_f_{}".format(j)]["se_"+ t]
+                se_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["se_"+ t]
                 x = np.array(nb_point_list) +25*i
                 nb_list_expended = [[n]*len(e) for n,e in zip(nb_point_list, se_f)]
                 ax.scatter(np.array(nb_list_expended) +25*i, se_f, c=color_list[i], s=0.1, label=t)
