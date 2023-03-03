@@ -77,7 +77,8 @@ class GravityPointProcess:
         else:
             points_kd_tree=None
         points_nb = self.point_pattern.points.shape[0]
-        if multiprocess and points_nb>7000:
+        # change to 7000 when core number =8
+        if multiprocess and points_nb>1000:
             #print(core_number)
             with Pool(core_number) as pool:
                 new_points = pool.map(

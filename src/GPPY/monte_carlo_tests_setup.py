@@ -185,7 +185,7 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
     return results, N_output_list
 
 
-
+# data frame of the MSE of MC methods for N = nb_point_list[idx_nb_points]
 def dataframe_mse_results(d, mc_results, nb_function, nb_sample, idx_nb_point=-1):
     type_mc = mc_results.keys()
     mse_dict={}
@@ -202,6 +202,37 @@ def dataframe_mse_results(d, mc_results, nb_function, nb_sample, idx_nb_point=-1
                 mse_dict["MSE(f_{})".format(j)][t] = mse_f[idx_nb_point]
                 mse_dict["std(MSE(f_{}))".format(j)][t] = std_mse[idx_nb_point]
     return pd.DataFrame(mse_dict)
+
+# Kolmogorov Smirniv test for residual of the liear regression to test if the residual is Gaussian
+def dataframe_residual_test(mc_list, nb_point_list, **kwargs):
+    result_test_dict = {}
+    nb_function = len(mc_list["MC"])
+    type_mc = mc_list.keys()
+    for j in range(1, nb_function+1) :
+        result_test_f_dict = {}
+        for t in type_mc:
+            std_f = mc_list[t]["mc_results_f_{}".format(j)]["std_"+ t]
+            _, _, _, _, result_test = regression_line(nb_point_list, std_f, test_stat=True, **kwargs)
+            result_test_f_dict[t] =  ("stat={0:.3f}".format(result_test[0]), "p={0:.3}".format(result_test[1]))
+        result_test_dict["f_{}".format(j)] = result_test_f_dict
+    return pd.DataFrame(result_test_dict)
+
+# Mann-Whitney test for the (square) errors of the method of type 'type_mc_test' with the others methods
+def dataframe_error_test(mc_list, nb_point_list, fct_name, type_mc_test="MCP"):
+    mw_test_dict = {}
+    type_mc = list(mc_list.keys())
+    nb_nb_points = len(nb_point_list)
+    #MC methods to be tested with type_mc_to_test
+    type_mc.remove(type_mc_test)
+    error_test = mc_list[type_mc_test]["mc_results_"+fct_name]["error_"+ type_mc_test]
+    for t in type_mc:
+        error_tested_with = mc_list[t]["mc_results_"+fct_name]["error_"+ t]
+        mw_test_N_dict = {}
+        for n in range(nb_nb_points):
+            mw_test = stats.mannwhitneyu(error_test[n], error_tested_with[n])
+            mw_test_N_dict["N={}".format(nb_point_list[n])] =  ("stat={0:.3f}".format(mw_test[0]), "p={0:.3}".format(mw_test[1]))
+        mw_test_dict[type_mc_test+ " and "+ t] = mw_test_N_dict
+    return pd.DataFrame(mw_test_dict)
 
 def mc_n_samples( pp_list, type_mc, mc_f_n=None, nb_function=5,
                  weights=None, correction=True, verbose=True):
@@ -240,19 +271,19 @@ def mc_n_samples( pp_list, type_mc, mc_f_n=None, nb_function=5,
         else:
             raise ValueError("Wrong MC type.")
         #print(mc_f_n["mc_results_f_{}".format(i)].keys(), type_mc)
+        # mean MC method of type 'type_mc'
         mean_mc = stat.mean(mc_values)
         mc_f_n["mc_results_f_{}".format(i)]["m_"+ type_mc].append(stat.mean(mc_values))
+        # var MC method of type 'type_mc'
         var_mc = stat.mean((mc_values - mean_mc)**2)
         mc_f_n["mc_results_f_{}".format(i)]["std_"+ type_mc].append(math.sqrt(var_mc))
-        m_list = mc_f_n["mc_results_f_{}".format(i)]["m_"+ type_mc]
-        mc_f_n["mc_results_f_{}".format(i)]["se_"+ type_mc].append(square_error(mc_values, integ_f))
-        std_list = mc_f_n["mc_results_f_{}".format(i)]["std_"+ type_mc]
-        #se_list = mc_f_n["mc_results_f_{}".format(i)]["se_"+ type_mc]
+        # square erreur MC method of type 'type_mc'
+        mc_f_n["mc_results_f_{}".format(i)]["error_"+ type_mc].append(error(mc_values, integ_f))
+        # print MSE
         if verbose:
             print("FOR f%s"%i)
-            #print(
-                #"bias_suqare=", se_list,
-                  #", std=", std_list)
+            m_list = mc_f_n["mc_results_f_{}".format(i)]["m_"+ type_mc]
+            std_list = mc_f_n["mc_results_f_{}".format(i)]["std_"+ type_mc]
             print("MSE=", mse(m_list, std_list, integ_f))
     return mc_f_n
 
@@ -331,8 +362,8 @@ def jaccobi_measure(x, jac_params):
     return result*support
 
 
-def square_error(approx, exact):
-    return np.square(np.array(approx) - exact)
+def error(approx, exact):
+    return np.array(approx) - exact
 
 def mse(mean, std, exact, verbose=True):
     #print(mean)
@@ -346,7 +377,7 @@ def mse(mean, std, exact, verbose=True):
 #     se = approx - exact
 #     return (pd.DataFrame({"{}".format(N): se}))
 
-def regression_line(x, y, log=True):
+def regression_line(x, y, log=True, test_stat=False, test_type="KS"):
     if log:
         x = np.log(x)
         y = np.log(y)
@@ -359,73 +390,68 @@ def regression_line(x, y, log=True):
     slope = reg_fit.slope
     std_slope = reg_fit.stderr
     reg_line = x*slope + reg_fit.intercept
-    #Kolmogorov-Smirnov test on the resedual of linear regressian to determine if it came from a normal distribution
-    residual = y - reg_line # residual r = y - estimated_y
-    ks_result = stats.kstest(residual, 'norm')
-    return reg_line, slope, std_slope, ks_result
+    if test_stat:
+        #Kolmogorov-Smirnov or Shapiro-Wilk test on the resedual of linear regressian to determine if it came from a normal distribution
+        residual = y - reg_line # residual r = y - estimated_y
+        if test_type=="KS":
+            test_result = stats.kstest(residual, 'norm')
+        elif test_type=="SW":
+            test_result = stats.shapiro(residual)
+        return reg_line, slope, std_slope, residual, test_result
+    else:
+        return reg_line, slope, std_slope
 
+def _residual_log_lin_reg_std_mc(mc_list, nb_point_list, mc_type, fct_name, test_type="KS"):
+    std = mc_list[mc_type]["mc_results_" + fct_name]["std_"+ mc_type]
+    _,_, _, residual, test_result = regression_line(nb_point_list, std, log=True, test_stat=True, test_type=test_type)
+    return residual, test_result
 
 def mc_f_dict(type_mc, se=True):
     d = {}
     d["m_"+type_mc]=[]
     d["std_"+type_mc]=[]
     if se:
-        d["se_"+type_mc]=[]
+        d["error_"+type_mc]=[]
     return d
 
-def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_fig=None, plot_dim=2, error_type="SE"):
+def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=True, plot_fct=False):
     nb_function = len(mc_list["MC"])
     type_mc = mc_list.keys()
-    nb_column=3
+    nb_column = _nb_column_plot(plot_std, plot_error, plot_fct)
     color_list = ["b", "k", "g", "m", "gray", "c","y", "darkred", "orange", "pink"]
-    fig= plt.figure(figsize=(16,int(4*nb_function)))
+    fig= plt.figure(figsize=(int(4*nb_column),int(3*nb_function)))
     for j in range(1, nb_function+1) :
         #plot
-        add_plot_functions(fig, nb_function, plot_dim, idx_row=j, nb_column=nb_column)
-        #std
-        ax = fig.add_subplot(nb_function, nb_column, 2+ nb_column*(j-1))
-        add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row=j)
-        #MSE
-        ax = fig.add_subplot(nb_function, 3, 3+ 3*(j-1))
-        add_plot_error(d, ax, mc_list, type_mc, nb_sample, nb_point_list, error_type, color_list, idx_row=j, log_scale=log_scale)
+        if plot_fct:
+            add_plot_functions(fig, nb_function, plot_dim, idx_row=j, nb_column=nb_column)
+        if plot_std:
+            #std
+            ax = fig.add_subplot(nb_function, nb_column, nb_column + nb_column*(j-1))
+            add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row=j)
+            if plot_error:
+                #error
+                ax = fig.add_subplot(nb_function, nb_column, nb_column+ nb_column*(j-1))
+                add_plot_error(d, ax, mc_list, type_mc, nb_sample, nb_point_list, error_type, color_list, idx_row=j, log_scale=log_scale)
+        else:
+            ax = fig.add_subplot(nb_function, nb_column, nb_column+ nb_column*(j-1))
+            add_plot_error(d, ax, mc_list, type_mc, nb_sample, nb_point_list, error_type, color_list, idx_row=j, log_scale=log_scale)
         plt.tight_layout()
     if save_fig is not None:
         fig.savefig(save_fig, bbox_inches='tight')
     plt.show()
     #return ax
 
-def data_frame_ks_test_residual(mc_list, nb_point_list):
-    ks_test_dict = {}
-    nb_function = len(mc_list["MC"])
-    type_mc = mc_list.keys()
-    for j in range(1, nb_function+1) :
-        ks_test_f_dict = {}
-        for t in type_mc:
-            std_f = mc_list[t]["mc_results_f_{}".format(j)]["std_"+ t]
-            _, _, _, ks_test = regression_line(nb_point_list, std_f)
-            ks_test_f_dict[t] =  ("stat={0:.3f}".format(ks_test[0]), "p={0:.3}".format(ks_test[1]))
-        ks_test_dict["f_{}".format(j)] = ks_test_f_dict
-    return pd.DataFrame(ks_test_dict)
-# def test_jaccobi_measure():
-#     x = np.array([[1, 1/2, 0], [1/2, 0, 0], [0, 1.1, 0]])
-#     #x= np.array([ [1/2, 0, 0]])
-#     jac_params = np.array([[1, 1, 0], [2, 0, 1]]).T
-#     expected = np.array([0, 9/8, 0])
-#     if np.isclose(jaccobi_measure(x, jac_params), expected, atol=1e-9).all():
-#         print("test succeeded")
-#     else:
-#         print("test failed, error=", jaccobi_measure(x,jac_params)- expected)
-
 def add_plot_functions(fig, nb_function, plot_dim, idx_row, nb_column):
-    x = np.linspace(-1,1, 100)
-    X, Y = np.meshgrid(x, x)
-    points = np.array([X.ravel(), Y.ravel()]).T
     if plot_dim==2:
+        x = np.linspace(-1,1, 100)
+        X, Y = np.meshgrid(x, x)
+        points = np.array([X.ravel(), Y.ravel()]).T
         z_f = globals()["f_{}".format(idx_row)](points)
         #print("Hello", z_f)
         ax = fig.add_subplot(nb_function, nb_column, 1+ nb_column*(idx_row-1), projection='3d')
         ax.scatter3D(X.ravel(), Y.ravel(), z_f, c=z_f)
     elif plot_dim==1:
+        x = np.linspace(-1,1, 300)
         y_f = globals()["f_{}".format(idx_row)](np.atleast_2d(x).T)
         ax = fig.add_subplot(nb_function, nb_column, 1+ nb_column*(idx_row-1))
         ax.plot(x, y_f)
@@ -438,15 +464,15 @@ def add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row):
     for t in type_mc:
         if t!="MCCV" or idx_row<6:
             std_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["std_"+ t]
-            reg_line, slope, std_reg, _ = regression_line(nb_point_list, std_f)
+            reg_line, slope, std_reg = regression_line(nb_point_list, std_f)
             label_with_slope = t+": slope={0:.2f}".format(slope)+ ", std={0:.2f}".format(std_reg)
             ax.scatter(log_nb_pts, np.log(std_f), c=color_list[i],s=3, label=label_with_slope)
             ax.plot(log_nb_pts, reg_line, c=color_list[i])
             #ax.plot(log_nb_pts, reg_line + 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
             #ax.plot(log_nb_pts, reg_line - 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
             i=i+1
-    ax.set_title("std (d=%s)" %d)
-    ax.set_xlabel(r"$\log(N)$")
+    ax.set_title("std (d=%s)" %d + r" for $f_{}$".format(idx_row))
+    ax.set_xlabel(r"$\log(N) $ ")
     ax.set_ylabel(r"$\log(std)$")
     ax.legend()
 
@@ -466,22 +492,50 @@ def add_plot_error(d, ax, mc_list, type_mc, nb_sample, nb_point_list, error_type
                     ax.plot(np.array(nb_point_list) +25*i, mse_f, c=color_list[i], marker=".", label=t)
                 ax.errorbar(x=np.array(nb_point_list) +25*i, y=mse_f, yerr=3 *err_bar,
                             color=color_list[i], capsize=4, capthick=1, elinewidth=6)
-            if error_type=="SE":
-                se_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["se_"+ t]
+            if error_type in ["SE", "Error"]:
+                error_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["error_"+ t]
+                if error_type=="SE":
+                    error_f = [e**2 for e in error_f]
                 x = np.array(nb_point_list) +25*i
-                nb_list_expended = [[n]*len(e) for n,e in zip(nb_point_list, se_f)]
-                ax.scatter(np.array(nb_list_expended) +25*i, se_f, c=color_list[i], s=0.1, label=t)
-                ax.boxplot(se_f, positions=x.tolist(),
+                nb_list_expended = [[n]*len(e) for n,e in zip(nb_point_list, error_f)]
+                ax.scatter(np.array(nb_list_expended) +25*i, error_f, c=color_list[i], s=0.1, label=t)
+                ax.boxplot(error_f, positions=x.tolist(),
                             widths = 30,
                             manage_ticks=False,
                             patch_artist=True, boxprops=dict(facecolor=color_list[i]),
-                            sym='')
+                            whiskerprops=dict(color=color_list[i]),
+                            #showmeans=True,
+                            #meanprops=dict(marker='.', color='r', markeredgecolor='r'),
+                            sym='',
+                            )
                 #ax.legend([a["boxes"][0]], [t], loc='lower left')
         i=i+1
     if log_scale:
         #ax.set_xscale("log")
         ax.set_yscale("log")
-    ax.set_title("Square error (d=%s)" %d)
+    ax.set_title(error_type + " (d=%s)" %d + r" for $f_{}$".format(idx_row))
     ax.set_xlabel(r"$N$")
-    ax.set_ylabel(r"$SE$")
+    ax.set_ylabel(error_type)
     ax.legend()
+
+
+def _nb_column_plot(plot_std, plot_error, plot_fct):
+    if plot_std and plot_error:
+        if plot_fct:
+            nb_column=3
+        else:
+            nb_column=2
+    else:
+        if plot_fct:
+            nb_column=2
+        else: nb_column=1
+    return nb_column
+# def test_jaccobi_measure():
+#     x = np.array([[1, 1/2, 0], [1/2, 0, 0], [0, 1.1, 0]])
+#     #x= np.array([ [1/2, 0, 0]])
+#     jac_params = np.array([[1, 1, 0], [2, 0, 1]]).T
+#     expected = np.array([0, 9/8, 0])
+#     if np.isclose(jaccobi_measure(x, jac_params), expected, atol=1e-9).all():
+#         print("test succeeded")
+#     else:
+#         print("test failed, error=", jaccobi_measure(x,jac_params)- expected)
