@@ -37,7 +37,9 @@ def estimate_control_variate_proposal(points, f):
     reg = LinearRegression().fit(points,y)
     coef = reg.coef_
     intercept = reg.intercept_
-    return lambda x: coef*x + intercept
+    proposal = lambda x: coef*x + intercept
+    mean_proposal = intercept
+    return proposal, mean_proposal
 
 def sobol_sequence(window, nb_points, discrepancy=False, **kwargs):
     #https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html
