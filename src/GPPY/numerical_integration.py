@@ -4,7 +4,7 @@ from GPPY.point_pattern import PointPattern
 import scipy as sp
 import statistics as stat
 import warnings
-import time
+from sklearn.linear_model import LinearRegression
 
 def monte_carlo_integration(points, f, weights=None):
     if weights is None:
@@ -31,6 +31,13 @@ def estimate_control_variate_parameter(points, f, proposal):
     numerator = sum((f(points)-mean_f)*a)
     denominator = sum(a**2)
     return numerator/denominator
+
+def estimate_control_variate_proposal(points, f):
+    y = f(points)
+    reg = LinearRegression().fit(points,y)
+    coef = reg.coef_
+    intercept = reg.intercept_
+    return lambda x: coef*x + intercept
 
 def sobol_sequence(window, nb_points, discrepancy=False, **kwargs):
     #https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html
