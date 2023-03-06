@@ -23,7 +23,7 @@ def control_variate_integration(points, f, proposal, mean_proposal, c=None):
         c= estimate_control_variate_parameter(points, f, proposal)
     return np.sum(f(points) - c*(proposal(points) - mean_proposal))/points_nb
 
-
+#todo add test
 def estimate_control_variate_parameter(points, f, proposal):
     mean_f = stat.mean(f(points))
     mean_proposal = stat.mean(proposal(points))
@@ -31,13 +31,13 @@ def estimate_control_variate_parameter(points, f, proposal):
     numerator = sum((f(points)-mean_f)*a)
     denominator = sum(a**2)
     return numerator/denominator
-
+#todo add test
 def estimate_control_variate_proposal(points, f):
     y = f(points)
     reg = LinearRegression().fit(points,y)
     coef = reg.coef_
     intercept = reg.intercept_
-    proposal = lambda x: coef*x + intercept
+    proposal = lambda x: np.sum(coef*x, axis=1) + intercept
     mean_proposal = intercept
     return proposal, mean_proposal
 

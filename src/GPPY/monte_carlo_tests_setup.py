@@ -5,6 +5,8 @@ from GPPY.numerical_integration import (monte_carlo_integration,
                                         sobol_sequence,
                                         sobol_point_pattern,
                                         control_variate_integration,
+                                        estimate_control_variate_proposal,
+                                        estimate_control_variate_parameter,
                                         delyon_portier_integration,
                                        bandwidth_0_delyon_portier)
 import statistics as stat
@@ -148,7 +150,7 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
         if "MCCV" in estimators:
             #MC Control variate
             time_start11 = time.time()
-            MCCV = mc_n_samples(pp_list=binomial_pp, type_mc="MCCV", mc_f_n=MCCV, nb_function=5)
+            MCCV = mc_n_samples(pp_list=binomial_pp, type_mc="MCCV", mc_f_n=MCCV, nb_function=5, support_window=support_window, nb_point_cv=100)
             time_end = time.time() - time_start11
             time_mc["MCCV"]=[int(time_end/60), time_end%60]
 
@@ -235,7 +237,7 @@ def dataframe_error_test(mc_list, nb_point_list, fct_name, type_mc_test="MCP"):
     return pd.DataFrame(mw_test_dict)
 
 def mc_n_samples( pp_list, type_mc, mc_f_n=None, nb_function=5,
-                 weights=None, correction=True, verbose=True):
+                 weights=None, correction=True, verbose=True, support_window=None, nb_point_cv=100):
     d= pp_list[0].window.dimension
     print("For", type_mc)
     print("---------------")
@@ -247,11 +249,15 @@ def mc_n_samples( pp_list, type_mc, mc_f_n=None, nb_function=5,
         f = globals()["f_{}".format(i)]
         integ_f = globals()["exact_integral_f_{}".format(i)](d)
         if type_mc=="MCCV":
-            proposal, m_proposal = globals()["cv_proposal_f_{}".format(i)](d)
+            points_cv_proposal= support_window.rand(n=nb_point_cv)
+            proposal, m_proposal = estimate_control_variate_proposal(points=points_cv_proposal, f=f)
+            points_cv_param_estimate= support_window.rand(n=nb_point_cv)
+            c = estimate_control_variate_parameter(points=points_cv_param_estimate, f=f, proposal=proposal)
             mc_values=[control_variate_integration(points=p.points,
                                                    f=f,
                                                    proposal=proposal,
-                                                   mean_proposal= m_proposal)
+                                                   mean_proposal= m_proposal,
+                                                   c=c)
                       for p in pp_list]
         elif type_mc=="MCDPP":
             mc_values = [monte_carlo_integration(points=p.points, f=f, weights=w)
@@ -414,7 +420,7 @@ def mc_f_dict(type_mc, se=True):
         d["error_"+type_mc]=[]
     return d
 
-def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=True, plot_fct=False):
+def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=False, plot_fct=False):
     nb_function = len(mc_list["MC"])
     type_mc = mc_list.keys()
     nb_column = _nb_column_plot(plot_std, plot_error, plot_fct)
