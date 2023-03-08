@@ -151,15 +151,15 @@ def exact_integral_f_5(d):
 #         print("test failed, f_8(x)=", f_8(x), "expected=", expected)
 # test_f_8()
 
-# def f_1(x):
-#     d = x.shape[1]
-#     r= min(np.diff(support_integrands(d).bounds, axis=1))/2
-#     support = BallWindow(center=[0]*d, radius=r)
-#     norm_x = np.linalg.norm(x, axis=1)
-#     return (1/(norm_x**d + 0.5**d) - 2**(d-1))*indicator(x, support)
-# def exact_integral_f_1(d):
-#     kappa_d = UnitBallWindow(center=[0]*d).volume
-#     return kappa_d*(math.log(2) - 0.5)
+def f_6(x):
+    d = x.shape[1]
+    r= min(np.diff(support_integrands(d).bounds, axis=1))/2
+    support = BallWindow(center=[0]*d, radius=r)
+    norm_x = np.linalg.norm(x, axis=1)
+    return (1/(norm_x**d + 0.5**d) - 2**(d-1))*indicator(x, support)
+def exact_integral_f_6(d):
+    kappa_d = UnitBallWindow(center=[0]*d).volume
+    return kappa_d*(math.log(2) - 0.5)
 
 # def cv_proposal_f_1(d):
 #     r= min(np.diff(support_integrands(d).bounds, axis=1))/2

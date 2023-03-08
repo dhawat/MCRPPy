@@ -18,18 +18,9 @@ import time
 import matplotlib.pyplot as plt
 from GPPY.spatial_windows import BallWindow, BoxWindow
 from GPPY.point_pattern import PointPattern
-from GPPY.monte_carlo_test_functions import (f_1, f_2, f_3, f_4,
-                                             f_5,
-                                             exact_integral_f_1,
-                                             exact_integral_f_2,
-                                             exact_integral_f_3,
-                                             exact_integral_f_4,
-                                             exact_integral_f_5
-                                             )
 
 
-def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimators=None, add_r_push=None, **kwargs):
-
+def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names, exact_integrals=None, estimators=None, add_r_push=None,nb_point_cv=500, **kwargs):
     if estimators is None:
         estimators = ["MC", "MCR", "MCP", "MCPS", "MCDPP",
                       "MCKS_h0", "MCKSc_h0", "RQMC", "MCCV"]
@@ -60,7 +51,7 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
         nb_point_output= int(stat.mean([p.points.shape[0] for p in push_pp]))
         N_output_list.append(nb_point_output)
         ## MCP
-        MCP = mc_n_samples(pp_list=push_pp, type_mc="MCP", mc_f_n=MCP, nb_function=nb_function)
+        MCP = mc_n_samples(pp_list=push_pp, type_mc="MCP", mc_f_n=MCP, fct_list=fct_list, fct_names=fct_names, exact_integrals=exact_integrals)
 
         if "MCPS" in estimators:
             # Push Sobol
@@ -71,7 +62,7 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
             time_end = time.time() - time_start1
             time_mc["MCPS"]=[int(time_end/60), (time_end%60)]
             ## MCPS
-            MCPS = mc_n_samples(pp_list=push_sobol_pp, type_mc="MCPS", mc_f_n=MCPS, nb_function=nb_function)
+            MCPS = mc_n_samples(pp_list=push_sobol_pp, type_mc="MCPS", mc_f_n=MCPS, fct_list=fct_list, fct_names=fct_names, exact_integrals=exact_integrals)
 
         if "MC" in estimators:
             # Binomial
@@ -82,7 +73,7 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
             time_end = time.time() - time_start2
             time_mc["MC"]=[int(time_end/60), time_end%60]
             ## MC classic
-            MC = mc_n_samples(pp_list=binomial_pp, type_mc="MC", mc_f_n=MC, nb_function=nb_function)
+            MC = mc_n_samples(pp_list=binomial_pp, type_mc="MC", mc_f_n=MC, fct_list=fct_list, fct_names=fct_names, exact_integrals=exact_integrals)
 
         if "MCR" in estimators:
             # Binomial ranodom
@@ -93,7 +84,7 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
             time_end = time.time() - time_start2_
             time_mc["MCR"]=[int(time_end/60), time_end%60]
             ### MC classique random
-            MCR = mc_n_samples(pp_list=binomial_pp_res, type_mc="MCR", mc_f_n=MCR, nb_function=nb_function)
+            MCR = mc_n_samples(pp_list=binomial_pp_res, type_mc="MCR", mc_f_n=MCR, fct_list=fct_list, fct_names=fct_names,exact_integrals=exact_integrals)
 
         if "MCDPP" in estimators:
             # DPP Bardenet Hardy
@@ -112,7 +103,8 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
             time_end = time.time() - time_start3
             time_mc["MCDPP"]=[int(time_end/60), time_end%60]
             MCDPP = mc_n_samples(pp_list=dpp_pp_scaled, type_mc="MCDPP", mc_f_n=MCDPP,
-                                nb_function=nb_function,
+                                fct_list=fct_list,
+                                fct_names=fct_names,exact_integrals=exact_integrals,
                                 weights=weights_dpp)
 
         if "RQMC" in estimators:
@@ -125,13 +117,15 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
             time_end = time.time() - time_start4
             time_mc["RQMC"]=[int(time_end/60), time_end%60]
             ## RQMC
-            RQMC = mc_n_samples(pp_list=sobol_pp, type_mc="RQMC", mc_f_n=RQMC, nb_function=nb_function)
+            RQMC = mc_n_samples(pp_list=sobol_pp, type_mc="RQMC", mc_f_n=RQMC, fct_list=fct_list, fct_names=fct_names, exact_integrals=exact_integrals)
 
         if "MCKS_h0" in estimators:
             time_start9 = time.time()
             MCKS_h0= mc_n_samples(pp_list=binomial_pp, type_mc="MCKS_h0",
                                 mc_f_n=MCKS_h0,
-                                nb_function=nb_function,
+                                fct_list=fct_list,
+                                fct_names=fct_names,
+                                exact_integrals=exact_integrals,
                                 correction=False)
             time_end = time.time() - time_start9
             time_mc["MCKS_h0"]=[int(time_end/60), time_end%60]
@@ -142,7 +136,9 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
             MCKSc_h0= mc_n_samples(pp_list=binomial_pp,
                                     type_mc="MCKSc_h0",
                                     mc_f_n=MCKSc_h0,
-                                    nb_function=nb_function,
+                                    fct_list=fct_list,
+                                    fct_names=fct_names,
+                                    exact_integrals=exact_integrals,
                                     correction=True)
             time_end = time.time() - time_start10
             time_mc["MCKSc_h0"]=[int(time_end/60), time_end%60]
@@ -150,7 +146,7 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
         if "MCCV" in estimators:
             #MC Control variate
             time_start11 = time.time()
-            MCCV = mc_n_samples(pp_list=binomial_pp, type_mc="MCCV", mc_f_n=MCCV, nb_function=5, support_window=support_window, nb_point_cv=100)
+            MCCV = mc_n_samples(pp_list=binomial_pp, type_mc="MCCV", mc_f_n=MCCV, fct_list=fct_list,fct_names=fct_names, exact_integrals=exact_integrals, support_window=support_window, nb_point_cv=nb_point_cv)
             time_end = time.time() - time_start11
             time_mc["MCCV"]=[int(time_end/60), time_end%60]
 
@@ -159,7 +155,7 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
         ##MC kernel smoothing corrected
         # time_start10 = time.time()
         # mcksc= mc_n_samples(pp_list=binomial_pp, type_mc="MCKSc", mc_f_n=mcksc,
-        #                     nb_function=nb_function,
+        #                     nb_fct=nb_fct,
         #                    correction=True)
         # time_end = time.time() - time_start10
         # time_mc["MCKSc"]=[int(time_end/60), time_end%60]
@@ -167,7 +163,7 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
          # MC kernel smoothing (Delyon Portier)
         # time_start9 = time.time()
         # mcks= mc_n_samples(pp_list=binomial_pp, type_mc="MCKS", mc_f_n=mcks,
-        #                    nb_function=nb_function,
+        #                    nb_fct=nb_fct,
         #                    correction=False)
         # time_end = time.time() - time_start9
         # time_mc["MCKS"]=[int(time_end/60), time_end%60]
@@ -188,35 +184,32 @@ def mc_results(d, nb_point_list, nb_sample, nb_function, support_window, estimat
 
 
 # data frame of the MSE of MC methods for N = nb_point_list[idx_nb_points]
-def dataframe_mse_results(d, mc_results, nb_function, nb_sample, idx_nb_point=-1):
+def dataframe_mse_results(mc_results, fct_names, exact_integrals, nb_sample, idx_nb_point=-1):
     type_mc = mc_results.keys()
     mse_dict={}
-    for j in range(1, nb_function+1):
-        mse_dict["MSE(f_{})".format(j)]={}
-        mse_dict["std(MSE(f_{}))".format(j)]={}
+    for name_f, integ_f in zip(fct_names, exact_integrals):
+        mse_dict["MSE("+ name_f + ")"]={}
+        mse_dict["std(MSE(" + name_f + "))"]={}
         for t in type_mc:
-            integ_f = globals()["exact_integral_f_{}".format(j)](d)
-            if t!="MCCV" or j<6:
-                m_f = mc_results[t]["mc_results_f_{}".format(j)]["m_"+ t]
-                std_f = mc_results[t]["mc_results_f_{}".format(j)]["std_"+ t]
-                mse_f = mse(m_f, std_f, integ_f, verbose=False)
-                std_mse = np.array(std_f/np.sqrt(nb_sample))
-                mse_dict["MSE(f_{})".format(j)][t] = mse_f[idx_nb_point]
-                mse_dict["std(MSE(f_{}))".format(j)][t] = std_mse[idx_nb_point]
+            m_f = mc_results[t]["mc_results_" + name_f]["m_"+ t]
+            std_f = mc_results[t]["mc_results_"+ name_f]["std_"+ t]
+            mse_f = mse(m_f, std_f, integ_f, verbose=False)
+            std_mse = np.array(std_f/np.sqrt(nb_sample))
+            mse_dict["MSE(" + name_f + ")"][t] = mse_f[idx_nb_point]
+            mse_dict["std(MSE("+ name_f +"))"][t] = std_mse[idx_nb_point]
     return pd.DataFrame(mse_dict)
 
 # Kolmogorov Smirniv test for residual of the liear regression to test if the residual is Gaussian
-def dataframe_residual_test(mc_list, nb_point_list, **kwargs):
+def dataframe_residual_test(mc_list, nb_point_list, fct_names, test_type="SW", **kwargs):
     result_test_dict = {}
-    nb_function = len(mc_list["MC"])
     type_mc = mc_list.keys()
-    for j in range(1, nb_function+1) :
+    for name in fct_names :
         result_test_f_dict = {}
         for t in type_mc:
-            std_f = mc_list[t]["mc_results_f_{}".format(j)]["std_"+ t]
-            _, _, _, _, result_test = regression_line(nb_point_list, std_f, test_stat=True, **kwargs)
+            std_f = mc_list[t]["mc_results_"+ name]["std_"+ t]
+            _, _, _, _, result_test = regression_line(nb_point_list, std_f, test_stat=True,test_type=test_type, **kwargs)
             result_test_f_dict[t] =  ("stat={0:.3f}".format(result_test[0]), "p={0:.3}".format(result_test[1]))
-        result_test_dict["f_{}".format(j)] = result_test_f_dict
+        result_test_dict[name] = result_test_f_dict
     return pd.DataFrame(result_test_dict)
 
 # Mann-Whitney test for the (square) errors of the method of type 'type_mc_test' with the others methods
@@ -236,18 +229,18 @@ def dataframe_error_test(mc_list, nb_point_list, fct_name, type_mc_test="MCP"):
         mw_test_dict[type_mc_test+ " and "+ t] = mw_test_N_dict
     return pd.DataFrame(mw_test_dict)
 
-def mc_n_samples( pp_list, type_mc, mc_f_n=None, nb_function=5,
-                 weights=None, correction=True, verbose=True, support_window=None, nb_point_cv=100):
-    d= pp_list[0].window.dimension
+def mc_n_samples( pp_list, type_mc, fct_list, fct_names,
+                 exact_integrals= None,
+                 mc_f_n=None,
+                 weights=None, correction=True, verbose=True, support_window=None, nb_point_cv=500):
     print("For", type_mc)
     print("---------------")
     if mc_f_n is None:
         mc_f_n = {}
-        for i in range(1, nb_function+1):
-            mc_f_n["mc_results_f_{}".format(i)] = mc_f_dict(type_mc=type_mc)
-    for i in range(1,nb_function+1):
-        f = globals()["f_{}".format(i)]
-        integ_f = globals()["exact_integral_f_{}".format(i)](d)
+        for name in fct_names:
+            mc_f_n["mc_results_" +name] = mc_f_dict(type_mc=type_mc)
+    i=0
+    for f,name in zip(fct_list, fct_names):
         if type_mc=="MCCV":
             points_cv_proposal= support_window.rand(n=nb_point_cv)
             proposal, m_proposal = estimate_control_variate_proposal(points=points_cv_proposal, f=f)
@@ -279,18 +272,22 @@ def mc_n_samples( pp_list, type_mc, mc_f_n=None, nb_function=5,
         #print(mc_f_n["mc_results_f_{}".format(i)].keys(), type_mc)
         # mean MC method of type 'type_mc'
         mean_mc = stat.mean(mc_values)
-        mc_f_n["mc_results_f_{}".format(i)]["m_"+ type_mc].append(stat.mean(mc_values))
+        mc_f_n["mc_results_" + name]["m_"+ type_mc].append(stat.mean(mc_values))
         # var MC method of type 'type_mc'
         var_mc = stat.mean((mc_values - mean_mc)**2)
-        mc_f_n["mc_results_f_{}".format(i)]["std_"+ type_mc].append(math.sqrt(var_mc))
+        mc_f_n["mc_results_" + name]["std_"+ type_mc].append(math.sqrt(var_mc))
         # square erreur MC method of type 'type_mc'
-        mc_f_n["mc_results_f_{}".format(i)]["error_"+ type_mc].append(error(mc_values, integ_f))
+        if exact_integrals is not None:
+            integ_f= exact_integrals[i]
+            mc_f_n["mc_results_" + name]["error_"+ type_mc].append(error(mc_values, integ_f))
         # print MSE
         if verbose:
             print("FOR f%s"%i)
-            m_list = mc_f_n["mc_results_f_{}".format(i)]["m_"+ type_mc]
-            std_list = mc_f_n["mc_results_f_{}".format(i)]["std_"+ type_mc]
-            print("MSE=", mse(m_list, std_list, integ_f))
+            m_list = mc_f_n["mc_results_" + name]["m_"+ type_mc]
+            std_list = mc_f_n["mc_results_" + name]["std_"+ type_mc]
+            if exact_integrals is not None:
+                print("MSE=", mse(m_list, std_list, integ_f))
+        i+=1
     return mc_f_n
 
 def samples_push(d, support_window, nb_point, nb_sample, father_type="Binomial", add_r=None, **kwargs):
@@ -419,51 +416,52 @@ def mc_f_dict(type_mc, se=True):
     if se:
         d["error_"+type_mc]=[]
     return d
-
-def plot_mc_results(d, mc_list, nb_point_list, nb_sample, log_scale=True, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=False, plot_fct=False):
-    nb_function = len(mc_list["MC"])
+#! TBC fct_name and fct_list
+def plot_mc_results(d, mc_list, nb_point_list, nb_sample, fct_list, fct_names, log_scale=True, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=False, plot_fct=False):
+    nb_fct = len(mc_list["MC"])
     type_mc = mc_list.keys()
     nb_column = _nb_column_plot(plot_std, plot_error, plot_fct)
     color_list = ["b", "k", "g", "m", "gray", "c","y", "darkred", "orange", "pink"]
-    fig= plt.figure(figsize=(int(4*nb_column),int(3*nb_function)))
-    for j in range(1, nb_function+1) :
+    fig= plt.figure(figsize=(int(4*nb_column),int(3*nb_fct)))
+    for j in range(1, nb_fct+1) :
         #plot
         if plot_fct:
-            add_plot_functions(fig, nb_function, plot_dim, idx_row=j, nb_column=nb_column)
+            add_plot_functions(fig, plot_dim, nb_fct=nb_fct,fct=fct_list[j-1], fct_name=fct_names[j-1], idx_row=j, nb_column=nb_column)
         if plot_std:
             #std
-            ax = fig.add_subplot(nb_function, nb_column, nb_column + nb_column*(j-1))
-            add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row=j)
+            ax = fig.add_subplot(nb_fct, nb_column, nb_column + nb_column*(j-1))
+            add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row=j, fct_name=fct_names[j-1])
             if plot_error:
                 #error
-                ax = fig.add_subplot(nb_function, nb_column, nb_column+ nb_column*(j-1))
-                add_plot_error(d, ax, mc_list, type_mc, nb_sample, nb_point_list, error_type, color_list, idx_row=j, log_scale=log_scale)
+                ax = fig.add_subplot(nb_fct, nb_column, nb_column+ nb_column*(j-1))
+                add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, idx_row=j, log_scale=log_scale, fct_name=fct_names[j-1])
         else:
-            ax = fig.add_subplot(nb_function, nb_column, nb_column+ nb_column*(j-1))
-            add_plot_error(d, ax, mc_list, type_mc, nb_sample, nb_point_list, error_type, color_list, idx_row=j, log_scale=log_scale)
+            ax = fig.add_subplot(nb_fct, nb_column, nb_column+ nb_column*(j-1))
+            add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, idx_row=j, log_scale=log_scale, fct_name=fct_names[j-1])
         plt.tight_layout()
     if save_fig is not None:
         fig.savefig(save_fig, bbox_inches='tight')
     plt.show()
     #return ax
 
-def add_plot_functions(fig, nb_function, plot_dim, idx_row, nb_column):
+def add_plot_functions(fig, plot_dim, nb_fct, fct,  idx_row, nb_column, fct_name=None):
     if plot_dim==2:
         x = np.linspace(-1,1, 100)
         X, Y = np.meshgrid(x, x)
         points = np.array([X.ravel(), Y.ravel()]).T
-        z_f = globals()["f_{}".format(idx_row)](points)
+        z_f = fct(points)
         #print("Hello", z_f)
-        ax = fig.add_subplot(nb_function, nb_column, 1+ nb_column*(idx_row-1), projection='3d')
+        ax = fig.add_subplot(nb_fct, nb_column, 1+ nb_column*(idx_row-1), projection='3d')
         ax.scatter3D(X.ravel(), Y.ravel(), z_f, c=z_f)
     elif plot_dim==1:
         x = np.linspace(-1,1, 300)
         y_f = globals()["f_{}".format(idx_row)](np.atleast_2d(x).T)
-        ax = fig.add_subplot(nb_function, nb_column, 1+ nb_column*(idx_row-1))
+        ax = fig.add_subplot(nb_fct, nb_column, 1+ nb_column*(idx_row-1))
         ax.plot(x, y_f)
-    ax.set_title(r"$f_%s$"%idx_row)
+    if fct_name is not None:
+        ax.set_title(r"$%s$"%fct_name)
 
-def add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row):
+def add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row, fct_name=None):
     log_nb_pts = np.log([nb_point_list]).T
     type_mc = mc_list.keys()
     i=0
@@ -477,49 +475,50 @@ def add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row):
             #ax.plot(log_nb_pts, reg_line + 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
             #ax.plot(log_nb_pts, reg_line - 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
             i=i+1
-    ax.set_title("std (d=%s)" %d + r" for $f_{}$".format(idx_row))
+    if fct_name is not None:
+        ax.set_title( r"For $%s$"%fct_name + " (d=%s)" %d)
     ax.set_xlabel(r"$\log(N) $ ")
     ax.set_ylabel(r"$\log(std)$")
     ax.legend()
 
-def add_plot_error(d, ax, mc_list, type_mc, nb_sample, nb_point_list, error_type, color_list, idx_row, log_scale):
+def add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, idx_row, log_scale, fct_name=None):
     i=0
     for t in type_mc:
-        integ_f = globals()["exact_integral_f_{}".format(idx_row)](d)
-        if t!="MCCV" or idx_row<6:
-            if error_type=="MSE":
-                m_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["m_"+ t]
-                std_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["std_"+ t]
-                mse_f = mse(m_f, std_f, integ_f, verbose=False)
-                err_bar = np.array(std_f/np.sqrt(nb_sample))
-                if log_scale:
-                    ax.loglog(np.array(nb_point_list) +25*i, mse_f, c=color_list[i], marker=".", label=t)
-                else:
-                    ax.plot(np.array(nb_point_list) +25*i, mse_f, c=color_list[i], marker=".", label=t)
-                ax.errorbar(x=np.array(nb_point_list) +25*i, y=mse_f, yerr=3 *err_bar,
-                            color=color_list[i], capsize=4, capthick=1, elinewidth=6)
-            if error_type in ["SE", "Error"]:
-                error_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["error_"+ t]
-                if error_type=="SE":
-                    error_f = [e**2 for e in error_f]
-                x = np.array(nb_point_list) +25*i
-                nb_list_expended = [[n]*len(e) for n,e in zip(nb_point_list, error_f)]
-                ax.scatter(np.array(nb_list_expended) +25*i, error_f, c=color_list[i], s=0.1, label=t)
-                ax.boxplot(error_f, positions=x.tolist(),
-                            widths = 30,
-                            manage_ticks=False,
-                            patch_artist=True, boxprops=dict(facecolor=color_list[i]),
-                            whiskerprops=dict(color=color_list[i]),
-                            #showmeans=True,
-                            #meanprops=dict(marker='.', color='r', markeredgecolor='r'),
-                            sym='',
-                            )
-                #ax.legend([a["boxes"][0]], [t], loc='lower left')
+        #integ_f = globals()["exact_integral_f_{}".format(idx_row)](d)
+        # if error_type=="MSE":
+        #     m_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["m_"+ t]
+        #     std_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["std_"+ t]
+        #     mse_f = mse(m_f, std_f, integ_f, verbose=False)
+        #     err_bar = np.array(std_f/np.sqrt(nb_sample))
+        #     if log_scale:
+        #         ax.loglog(np.array(nb_point_list) +25*i, mse_f, c=color_list[i], marker=".", label=t)
+        #     else:
+        #         ax.plot(np.array(nb_point_list) +25*i, mse_f, c=color_list[i], marker=".", label=t)
+        #     ax.errorbar(x=np.array(nb_point_list) +25*i, y=mse_f, yerr=3 *err_bar,
+        #                 color=color_list[i], capsize=4, capthick=1, elinewidth=6)
+        if error_type in ["SE", "Error"]:
+            error_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["error_"+ t]
+            if error_type=="SE":
+                error_f = [e**2 for e in error_f]
+            x = np.array(nb_point_list) +25*i
+            nb_list_expended = [[n]*len(e) for n,e in zip(nb_point_list, error_f)]
+            ax.scatter(np.array(nb_list_expended) +25*i, error_f, c=color_list[i], s=0.1, label=t)
+            ax.boxplot(error_f, positions=x.tolist(),
+                        widths = 30,
+                        manage_ticks=False,
+                        patch_artist=True, boxprops=dict(facecolor=color_list[i]),
+                        whiskerprops=dict(color=color_list[i]),
+                        #showmeans=True,
+                        #meanprops=dict(marker='.', color='r', markeredgecolor='r'),
+                        sym='',
+                        )
+            #ax.legend([a["boxes"][0]], [t], loc='lower left')
         i=i+1
     if log_scale:
         #ax.set_xscale("log")
         ax.set_yscale("log")
-    ax.set_title(error_type + " (d=%s)" %d + r" for $f_{}$".format(idx_row))
+    if fct_name is not None:
+        ax.set_title(r"For $%s$"%fct_name + " (d=%s)" %d)
     ax.set_xlabel(r"$N$")
     ax.set_ylabel(error_type)
     ax.legend()
