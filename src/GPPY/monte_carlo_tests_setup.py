@@ -1,6 +1,7 @@
 from GPPY.gravity_point_process import GravityPointProcess
 from dppy.multivariate_jacobi_ope import MultivariateJacobiOPE
 import math
+import statsmodels.api as sm
 from GPPY.numerical_integration import (monte_carlo_integration,
                                         sobol_sequence,
                                         sobol_point_pattern,
@@ -200,6 +201,7 @@ def dataframe_mse_results(mc_results, fct_names, exact_integrals, nb_sample, idx
     return pd.DataFrame(mse_dict)
 
 # Kolmogorov Smirniv test for residual of the liear regression to test if the residual is Gaussian
+# q-q plot pf the residual of the linear regresssion of log(std) w.r.t. log(N)
 def dataframe_residual_test(mc_list, nb_point_list, fct_names, test_type="SW", **kwargs):
     result_test_dict = {}
     type_mc = mc_list.keys()
@@ -207,10 +209,33 @@ def dataframe_residual_test(mc_list, nb_point_list, fct_names, test_type="SW", *
         result_test_f_dict = {}
         for t in type_mc:
             std_f = mc_list[t]["mc_results_"+ name]["std_"+ t]
-            _, _, _, _, result_test = regression_line(nb_point_list, std_f, test_stat=True,test_type=test_type, **kwargs)
+            _, _, _, _, result_test = regression_line(nb_point_list, std_f, residual=True,test_type=test_type, **kwargs)
             result_test_f_dict[t] =  ("stat={0:.3f}".format(result_test[0]), "p={0:.3}".format(result_test[1]))
         result_test_dict[name] = result_test_f_dict
     return pd.DataFrame(result_test_dict)
+
+def qq_plot_residual(mc_list, nb_point_list, fct_names, save_fig=None, **kwargs):
+    type_mc = mc_list.keys()
+    fct_nb = len(fct_names)
+    color_list = ["b", "k", "g", "m", "gray", "c","y", "darkred", "orange", "pink"]
+    fig, ax = plt.subplots(fct_nb, 1, figsize=(4, int(3*fct_nb)))
+    for i in range(fct_nb):
+        j=0
+        for t in type_mc:
+            std_f = mc_list[t]["mc_results_"+ fct_names[i]]["std_"+ t]
+            _, _, _, residual = regression_line(nb_point_list, std_f, residual=True,test_type=None, **kwargs)
+            # pp = sm.ProbPlot(residual, fit=True)
+            # qq = pp.qqplot(marker='.', markerfacecolor=color_list[j], markeredgecolor=color_list[j], alpha=0.3, label=t)
+            # sm.qqline(qq.axes[0], line='45', fmt='r--', axis=ax[i], label=t)
+            sm.qqplot(residual, line='s', markerfacecolor=color_list[j], markeredgecolor=color_list[j], marker='.', alpha=0.3, ax=ax[i],label=t)
+            #ax[j].lines.set_color(color_list[j])
+            j+=1
+    #plt.tight_layout()
+        ax[i].legend()
+    if save_fig is not None:
+        fig.savefig(save_fig, bbox_inches='tight')
+    plt.show()
+
 
 # Mann-Whitney test for the (square) errors of the method of type 'type_mc_test' with the others methods
 def dataframe_error_test(mc_list, nb_point_list, fct_name, type_mc_test="MCP"):
@@ -380,7 +405,7 @@ def mse(mean, std, exact, verbose=True):
 #     se = approx - exact
 #     return (pd.DataFrame({"{}".format(N): se}))
 
-def regression_line(x, y, log=True, test_stat=False, test_type="KS"):
+def regression_line(x, y, log=True, residual=False, test_type="KS"):
     if log:
         x = np.log(x)
         y = np.log(y)
@@ -393,20 +418,25 @@ def regression_line(x, y, log=True, test_stat=False, test_type="KS"):
     slope = reg_fit.slope
     std_slope = reg_fit.stderr
     reg_line = x*slope + reg_fit.intercept
-    if test_stat:
+    if residual:
         #Kolmogorov-Smirnov or Shapiro-Wilk test on the resedual of linear regressian to determine if it came from a normal distribution
         residual = y - reg_line # residual r = y - estimated_y
         if test_type=="KS":
             test_result = stats.kstest(residual, 'norm')
         elif test_type=="SW":
             test_result = stats.shapiro(residual)
-        return reg_line, slope, std_slope, residual, test_result
+        else:
+            test_result=None
+        if test_result is not None:
+            return reg_line, slope, std_slope, residual, test_result
+        else:
+            return reg_line, slope, std_slope, residual
     else:
         return reg_line, slope, std_slope
 
 def _residual_log_lin_reg_std_mc(mc_list, nb_point_list, mc_type, fct_name, test_type="KS"):
     std = mc_list[mc_type]["mc_results_" + fct_name]["std_"+ mc_type]
-    _,_, _, residual, test_result = regression_line(nb_point_list, std, log=True, test_stat=True, test_type=test_type)
+    _,_, _, residual, test_result = regression_line(nb_point_list, std, log=True, residual=True, test_type=test_type)
     return residual, test_result
 
 def mc_f_dict(type_mc, se=True):
@@ -417,7 +447,7 @@ def mc_f_dict(type_mc, se=True):
         d["error_"+type_mc]=[]
     return d
 #! TBC fct_name and fct_list
-def plot_mc_results(d, mc_list, nb_point_list, nb_sample, fct_list, fct_names, log_scale=True, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=False, plot_fct=False):
+def plot_mc_results(d, mc_list, nb_point_list, fct_list, fct_names, log_scale=True, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=False, plot_fct=False):
     nb_fct = len(mc_list["MC"])
     type_mc = mc_list.keys()
     nb_column = _nb_column_plot(plot_std, plot_error, plot_fct)
