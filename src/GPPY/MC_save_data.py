@@ -6,6 +6,9 @@ from GPPY.monte_carlo_test_functions import (f_1, f_2, f_3, f_4, f_5,
                                              exact_integral_f_5,
                                              support_integrands)
 import pickle
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../src/'))
 
 # Setup
 nb_point_list= np.arange(50, 1550, 50)
@@ -18,7 +21,7 @@ estimators = ["MC",
               "MCDPP",
               "RQMC",
               "MCCV"]
-core_number=30
+core_number=70
 fct_list = [f_1, f_2, f_3, f_4, f_5]
 fct_names = ["f_1", "f_2", "f_3", "f_4", "f_5"]
 
@@ -30,16 +33,11 @@ exact_integrals= [exact_integral_f_1(d), exact_integral_f_2(d),
                   exact_integral_f_5(d)]
 support_window = support_integrands(d)
 if __name__ == "__main__":
-    mc_results_2d, _ = mc_results(d, nb_point_list, nb_sample=nb_sample,
-                                             support_window=support_window,
-                                            fct_list=fct_list,
-                                            fct_names=fct_names,
-                                            exact_integrals=exact_integrals,
-                                            estimators=estimators,
-                                            core_number=core_number)
-##save results
-with open('mc_results_2d.pickle', 'wb') as handle:
-    pickle.dump(mc_results_2d, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    mc_results_2d, _ = mc_results(d, nb_point_list,
+                                  nb_sample=nb_sample,support_window=support_window,
+                                  fct_list=fct_list,fct_names=fct_names, exact_integrals=exact_integrals,
+                                  estimators=estimators,core_number=core_number,
+                                  file_name='mc_results_2d.pickle')
 
 print("Done with d=", d)
 #------------------------------------------------
@@ -58,11 +56,8 @@ if __name__ == "__main__":
                                             fct_names=fct_names,
                                             exact_integrals=exact_integrals,
                                             estimators=estimators,
-                                            core_number=core_number)
-
-##save results
-with open('mc_results_3d.pickle', 'wb') as handle:
-    pickle.dump(mc_results_3d, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                                            core_number=core_number,
+                                            file_name='mc_results_3d.pickle')
 
 print("Done with d=", d)
 #-------------------------------------------
@@ -81,9 +76,7 @@ if __name__ == "__main__":
                                             fct_names=fct_names,
                                             exact_integrals=exact_integrals,
                                             estimators=estimators,
-                                            core_number=core_number)
-##save results
-with open('mc_results_4d.pickle', 'wb') as handle:
-    pickle.dump(mc_results_4d, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                                            core_number=core_number,
+                                            file_name='mc_results_4d.pickle')
 
 print("Done with d=", d)
