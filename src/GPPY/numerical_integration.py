@@ -10,7 +10,7 @@ def monte_carlo_integration(points, f, weights=None):
     if weights is None:
         points_nb = points.shape[0]
         weights = 1/points_nb
-    #print("f_x", f(points), "w", weights, "pod", f(points)*weights)
+    #print("In MC", f(points))
     return np.sum(f(points)*weights)
 
 def importance_sampling_integration(points, f, proposal):
