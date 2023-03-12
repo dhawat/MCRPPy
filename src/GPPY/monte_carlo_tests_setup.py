@@ -23,7 +23,7 @@ from GPPY.spatial_windows import BallWindow, BoxWindow
 from GPPY.point_pattern import PointPattern
 
 
-def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names, exact_integrals=None, estimators=None, add_r_push=None,nb_point_cv=500, file_name=None, **kwargs):
+def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names, exact_integrals=None, estimators=None, add_r_push=None,nb_point_cv=500, file_name=None, epsilon_push=None, **kwargs):
     if estimators is None:
         estimators = ["MC", "MCR", "MCP", "MCPS", "MCDPP",
                       "MCKS_h0", "MCKSc_h0", "RQMC", "MCCV"]
@@ -48,7 +48,7 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
         # Push Binomial
         ## Push Binomial pp
         time_start1 = time.time()
-        push_pp = samples_push(d, support_window=support_window, nb_point=n, nb_sample=nb_sample, add_r=add_r_push, **kwargs)
+        push_pp = samples_push(d, support_window=support_window, nb_point=n, nb_sample=nb_sample, add_r=add_r_push, epsilon=epsilon_push, **kwargs)
         time_end = time.time() - time_start1
         time_mc["MCP"]=[int(time_end/60), (time_end%60)]
         nb_point_output= int(stat.mean([p.points.shape[0] for p in push_pp]))
@@ -326,7 +326,7 @@ def dataframe_error_test(mc_list, nb_point_list, fct_name, type_mc_test="MCP"):
         mw_test_dict[type_mc_test+ " and "+ t] = mw_test_N_dict
     return pd.DataFrame(mw_test_dict)
 
-def samples_push(d, support_window, nb_point, nb_sample, father_type="Binomial", add_r=None, **kwargs):
+def samples_push(d, support_window, nb_point, nb_sample, father_type="Binomial", add_r=None, epsilon=None, **kwargs):
     time_start = time.time()
     if father_type =="Binomial":
         father_pp_list = _binomial_pp_ball(d, window=support_window, nb_point=nb_point, nb_sample=nb_sample, add_r=add_r)
@@ -336,11 +336,12 @@ def samples_push(d, support_window, nb_point, nb_sample, father_type="Binomial",
     else:
         raise ValueError("type are Binomial and Sobol")
     gpp_pp = [GravityPointProcess(p) for p in father_pp_list]
-    epsilon_0 = gpp_pp[0].epsilon_critical
+    if epsilon is None:
+        epsilon = gpp_pp[0].epsilon_critical
     print("N Big=", father_pp_list[0].points.shape[0],
-          ", N expected =", nb_point, ", Epsilon=", epsilon_0)
+          ", N expected =", nb_point, ", Epsilon=", epsilon)
     #time_start = time.time()
-    push_pp_big = [g.pushed_point_pattern(epsilon=epsilon_0,
+    push_pp_big = [g.pushed_point_pattern(epsilon=epsilon,
                                             **kwargs)
                     for g in gpp_pp]
     push_pp = [g.restrict_to_window(support_window) for g in push_pp_big]

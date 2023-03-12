@@ -119,7 +119,8 @@ class GravityPointProcess:
 
 
 
-
+def epsilon_critical(d, intensity):
+    return 1/(2*d*volume_unit_ball(d)*intensity)
 # @jit
 # def fast_push_point(points, intensity, epsilon, stop_time):
 #     points_nb = points.shape[0]
