@@ -1,5 +1,6 @@
 from GPPY.gravity_point_process import GravityPointProcess
 from dppy.multivariate_jacobi_ope import MultivariateJacobiOPE
+from multiprocessing import Pool
 import math
 import statsmodels.api as sm
 from GPPY.monte_carlo_test_functions import support_integrands_ball
@@ -23,7 +24,7 @@ from GPPY.spatial_windows import BallWindow, BoxWindow
 from GPPY.point_pattern import PointPattern
 
 
-def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names, exact_integrals=None, estimators=None, add_r_push=None,nb_point_cv=500, file_name=None, epsilon_push=None, **kwargs):
+def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names, exact_integrals=None, estimators=None, add_r_push=None,nb_point_cv=500, file_name=None, epsilon_push=None, nb_core=7,pool_dpp=True, **kwargs):
     if estimators is None:
         estimators = ["MC", "MCR", "MCP", "MCPS", "MCDPP",
                       "MCKS_h0", "MCKSc_h0", "RQMC", "MCCV"]
@@ -48,7 +49,7 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
         # Push Binomial
         ## Push Binomial pp
         time_start1 = time.time()
-        push_pp = samples_push(d, support_window=support_window, nb_point=n, nb_sample=nb_sample, add_r=add_r_push, epsilon=epsilon_push, **kwargs)
+        push_pp = samples_push(d, support_window=support_window, nb_point=n, nb_sample=nb_sample, add_r=add_r_push, epsilon=epsilon_push, core_number=nb_core, **kwargs)
         time_end = time.time() - time_start1
         time_mc["MCP"]=[int(time_end/60), (time_end%60)]
         nb_point_output= int(stat.mean([p.points.shape[0] for p in push_pp]))
@@ -93,15 +94,16 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
             # DPP Bardenet Hardy
             ## DPP pp
             time_start3 = time.time()
-            #jac_params = -0.5 + np.random.rand(d, 2)
-            jac_params = np.array([[0, 0]]*d) #jaccobi measure=1
-            dpp = MultivariateJacobiOPE(nb_point_output, jac_params)
-            dpp_points = [dpp.sample() for _ in range(nb_sample)]
+            if pool_dpp:
+                with Pool(nb_core) as pool:
+                    dpp_points = pool.starmap(sample_dpp, [(d, nb_point_output) for _ in range(nb_sample)])
+            else:
+                dpp_points = [sample_dpp(d, nb_point_output) for _ in range(nb_sample)]
             #rescale points to be in support_window
             dpp_pp_scaled = [PointPattern(p/2, window=support_window) for p in dpp_points]
-            #scaled weight
             ##MCDPP
-            weights_dpp = [1/(2**d*dpp.K(p, eval_pointwise=True))
+            #scaled weight
+            weights_dpp = [rescaled_weights_dpp(p, eval_pointwise=True)
                         for p in dpp_points]
             time_end = time.time() - time_start3
             time_mc["MCDPP"]=[int(time_end/60), time_end%60]
@@ -150,7 +152,7 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
             #MC Control variate
             time_start11 = time.time()
             support_window_cv = support_integrands_ball(d)
-            MCCV = mc_results_single_n(pp_list=binomial_pp, type_mc="MCCV", mc_f_n=MCCV, fct_list=fct_list,fct_names=fct_names, exact_integrals=exact_integrals, support_window=support_window, nb_point_cv=nb_point_cv, support_window_cv=support_window_cv)
+            MCCV = mc_results_single_n(pp_list=binomial_pp, type_mc="MCCV", mc_f_n=MCCV, fct_list=fct_list,fct_names=fct_names, exact_integrals=exact_integrals, nb_point_cv=nb_point_cv, support_window_cv=support_window_cv)
             time_end = time.time() - time_start11
             time_mc["MCCV"]=[int(time_end/60), time_end%60]
 
@@ -192,7 +194,7 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
 def mc_results_single_n( pp_list, type_mc, fct_list, fct_names,
                  exact_integrals= None,
                  mc_f_n=None,
-                 weights=None, correction=True, verbose=True, support_window=None, nb_point_cv=None,
+                 weights=None, correction=True, verbose=True, nb_point_cv=None,
                  support_window_cv=None):
     print("For", type_mc)
     print("---------------")
@@ -344,6 +346,18 @@ def samples_push(d, support_window, nb_point, nb_sample, father_type="Binomial",
     time_end = time.time() - time_start
     print("Time Push=", int(time_end/60), "min", time_end%60, "s")
     return push_pp
+
+def sample_dpp(d, nb_point_output):
+    jac_params = np.array([[0, 0]]*d) #jaccobi measure=1
+    dpp = MultivariateJacobiOPE(nb_point_output, jac_params)
+    return dpp.sample()
+
+def rescaled_weights_dpp(points, eval_pointwise=True):
+    N, d = points.shape
+    jac_params = np.array([[0, 0]]*d) #jaccobi measure=1
+    dpp = MultivariateJacobiOPE(N, jac_params)
+    weights_dpp = 1/(2**d*dpp.K(points, eval_pointwise=eval_pointwise))
+    return weights_dpp
 
 #! done
 def _binomial_pp_ball(d, window, nb_point, nb_sample, add_r=None):
