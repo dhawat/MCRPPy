@@ -19,7 +19,7 @@ def f_1(x):
     support = support_integrands_ball(d)
     norm_x = np.linalg.norm(x, axis=1)
     a = 1 - 4*norm_x**2
-    b = np.nan_to_num(np.exp(-2/a))
+    b = np.nan_to_num(np.exp(-2/a, where=a!=0))
     return a**2*b*indicator(x, support)
 
 def exact_integral_f_1(d):
