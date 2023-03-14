@@ -151,8 +151,9 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
         if "MCCV" in estimators:
             #MC Control variate
             time_start11 = time.time()
-            support_window_cv = support_integrands_ball(d)
-            MCCV = mc_results_single_n(pp_list=binomial_pp, type_mc="MCCV", mc_f_n=MCCV, fct_list=fct_list,fct_names=fct_names, exact_integrals=exact_integrals, nb_point_cv=nb_point_cv, support_window_cv=support_window_cv)
+            #support_window_cv = support_integrands_ball(d)
+            MCCV = mc_results_single_n(pp_list=binomial_pp, type_mc="MCCV",
+                                       mc_f_n=MCCV, fct_list=fct_list,fct_names=fct_names, exact_integrals=exact_integrals, nb_point_cv=nb_point_cv, support_window_cv=support_window)
             time_end = time.time() - time_start11
             time_mc["MCCV"]=[int(time_end/60), time_end%60]
 
@@ -205,9 +206,9 @@ def mc_results_single_n( pp_list, type_mc, fct_list, fct_names,
     i=0
     for f,name in zip(fct_list, fct_names):
         if type_mc=="MCCV":
-            points_cv_proposal= support_window_cv.rand(n=nb_point_cv)
+            points_cv_proposal= support_window_cv.rand(n=nb_point_cv, seed=0)
             proposal, m_proposal = estimate_control_variate_proposal(points=points_cv_proposal, f=f)
-            points_cv_param_estimate= support_window_cv.rand(n=nb_point_cv)
+            points_cv_param_estimate= support_window_cv.rand(n=nb_point_cv, seed=1)
             c = estimate_control_variate_parameter(points=points_cv_param_estimate, f=f, proposal=proposal)
             mc_values=[control_variate_integration(points=p.points,
                                                    f=f,
@@ -500,7 +501,7 @@ def plot_mc_results(d, mc_list, nb_point_list, fct_list, fct_names, log_scale=Tr
                 add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, idx_row=j, log_scale=log_scale, fct_name=fct_names[j-1])
         else:
             ax = fig.add_subplot(nb_fct, nb_column, nb_column+ nb_column*(j-1))
-            add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, idx_row=j, log_scale=log_scale, fct_name=fct_names[j-1])
+            add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, log_scale=log_scale, fct_name=fct_names[j-1])
         plt.tight_layout()
     if save_fig is not None:
         fig.savefig(save_fig, bbox_inches='tight')
@@ -541,26 +542,14 @@ def add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row, fct_name=No
     if fct_name is not None:
         ax.set_title( r"For $%s$"%fct_name + " (d=%s)" %d)
     ax.set_xlabel(r"$\log(N) $ ")
-    ax.set_ylabel(r"$\log(std)$")
+    ax.set_ylabel(r"$\log(\sigma)$")
     ax.legend()
 
-def add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, idx_row, log_scale, fct_name=None):
+def add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, log_scale, fct_name=None):
     i=0
     for t in type_mc:
-        #integ_f = globals()["exact_integral_f_{}".format(idx_row)](d)
-        # if error_type=="MSE":
-        #     m_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["m_"+ t]
-        #     std_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["std_"+ t]
-        #     mse_f = mse(m_f, std_f, integ_f, verbose=False)
-        #     err_bar = np.array(std_f/np.sqrt(nb_sample))
-        #     if log_scale:
-        #         ax.loglog(np.array(nb_point_list) +25*i, mse_f, c=color_list[i], marker=".", label=t)
-        #     else:
-        #         ax.plot(np.array(nb_point_list) +25*i, mse_f, c=color_list[i], marker=".", label=t)
-        #     ax.errorbar(x=np.array(nb_point_list) +25*i, y=mse_f, yerr=3 *err_bar,
-        #                 color=color_list[i], capsize=4, capthick=1, elinewidth=6)
         if error_type in ["SE", "Error"]:
-            error_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["error_"+ t]
+            error_f = mc_list[t]["mc_results_"+fct_name]["error_"+ t]
             if error_type=="SE":
                 error_f = [e**2 for e in error_f]
             x = np.array(nb_point_list) +25*i

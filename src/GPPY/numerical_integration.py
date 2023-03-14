@@ -4,7 +4,9 @@ from GPPY.point_pattern import PointPattern
 import scipy as sp
 import statistics as stat
 import warnings
+from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
 
 def monte_carlo_integration(points, f, weights=None):
     if weights is None:
@@ -25,20 +27,41 @@ def control_variate_integration(points, f, proposal, mean_proposal, c=None):
 
 #todo add test
 def estimate_control_variate_parameter(points, f, proposal):
-    mean_f = stat.mean(f(points))
-    mean_proposal = stat.mean(proposal(points))
-    a  = proposal(points) - mean_proposal
-    numerator = sum((f(points)-mean_f)*a)
+    r"""
+    :math:`\frac{\sum_{\mathbf{x} \in \mathcal{B}^{\prime} } f(\mathbf{x}) (h(\mathbf{x}) - \bar{h})}{\sum_{\mathbf{x} \in \mathcal{B}^{\prime}} (h(\mathbf{x}) - \bar{h})^2}`
+    """
+    a  = proposal(points) - stat.mean(proposal(points))
+    numerator = sum(f(points)*a)
     denominator = sum(a**2)
     return numerator/denominator
 #todo add test
-def estimate_control_variate_proposal(points, f):
+def estimate_control_variate_proposal(points, f, poly_degree=2, plot=False):
     y = f(points)
-    reg = LinearRegression().fit(points,y)
-    coef = reg.coef_
-    intercept = reg.intercept_
-    proposal = lambda x: np.sum(coef*x, axis=1) + intercept
-    mean_proposal = intercept
+    # create a polynomial features object to create 'poly_degree' degree polynomial features
+    poly = PolynomialFeatures(degree=poly_degree, include_bias=False)
+    # transform the input data to include the 'poly_degree' degree polynomial features
+    points_poly = poly.fit_transform(points)
+    # create a linear regression model
+    model = LinearRegression()
+    # fit the model to the data
+    model.fit(points_poly, y)
+    # the regressed model
+    proposal = lambda x: model.predict(poly.fit_transform(x))
+    #proposal = lambda x: np.sum(model.coef_*x, axis=1) + model.intercept_
+    # mean of proposal for centered uniform law
+    mean_proposal = model.intercept_
+    if plot and points.shape[1]==2:
+        x = np.linspace(-1/2,1/2, 100)
+        X, Y = np.meshgrid(x, x)
+        z = np.array([X.ravel(), Y.ravel()]).T
+        fig = plt.figure(figsize=(14, 4))
+        ax = fig.add_subplot(2, 6, 1, projection='3d')
+        ax.scatter3D(X.ravel(), Y.ravel(), f(z), c=f(z))
+        ax.set_title(r"$f$")
+        ax = fig.add_subplot(2, 6, 2, projection='3d')
+        ax.scatter3D(X.ravel(), Y.ravel(), proposal(z), c=proposal(z))
+        ax.set_title(r"$Proposal$")
+        plt.show()
     return proposal, mean_proposal
 
 def sobol_sequence(window, nb_points, discrepancy=False, **kwargs):
