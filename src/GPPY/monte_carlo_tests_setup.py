@@ -514,7 +514,6 @@ def add_plot_functions(fig, plot_dim, nb_fct, fct,  idx_row, nb_column, fct_name
         X, Y = np.meshgrid(x, x)
         points = np.array([X.ravel(), Y.ravel()]).T
         z_f = fct(points)
-        #print("Hello", z_f)
         ax = fig.add_subplot(nb_fct, nb_column, 1+ nb_column*(idx_row-1), projection='3d')
         ax.scatter3D(X.ravel(), Y.ravel(), z_f, c=z_f)
     elif plot_dim==1:
@@ -530,7 +529,7 @@ def add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row, fct_name=No
     type_mc = mc_list.keys()
     i=0
     for t in type_mc:
-        if t!="MCCV" or idx_row<6:
+        if t!="MCCV":
             std_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["std_"+ t]
             reg_line, slope, std_reg = regression_line(nb_point_list, std_f)
             label_with_slope = t+": slope={0:.2f}".format(slope)+ ", std={0:.2f}".format(std_reg)
