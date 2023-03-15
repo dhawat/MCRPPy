@@ -481,12 +481,13 @@ def mc_f_dict(type_mc, se=True):
         d["error_"+type_mc]=[]
     return d
 #! TBC fct_name and fct_list
-def plot_mc_results(d, mc_list, nb_point_list, fct_list, fct_names, log_scale=True, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=False, plot_fct=False):
+def plot_mc_results(d, mc_list, nb_point_list, fct_list, fct_names, log_scale=True, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=False, plot_fct=False, nb_subsample_nb_points=None):
     nb_fct = len(fct_list)
     type_mc = mc_list.keys()
     nb_column = _nb_column_plot(plot_std, plot_error, plot_fct)
-    color_list = ["b", "k", "g", "m", "gray", "c","y", "darkred", "orange", "pink"]
-    fig= plt.figure(figsize=(int(4*nb_column),int(3*nb_fct)))
+    color_list = ["b", "k", "g", "m",  "orange", "gray", "c","y", "darkred", "pink"]
+    marker_list = [ "^", "v", "<", ">", "1","+", "x", ".", "*",]
+    fig= plt.figure(figsize=(int(5*nb_column),int(4*nb_fct)))
     for j in range(1, nb_fct+1) :
         #plot
         if plot_fct:
@@ -494,14 +495,28 @@ def plot_mc_results(d, mc_list, nb_point_list, fct_list, fct_names, log_scale=Tr
         if plot_std:
             #std
             ax = fig.add_subplot(nb_fct, nb_column, nb_column + nb_column*(j-1))
-            add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row=j, fct_name=fct_names[j-1])
+            add_plot_std(d, ax, mc_list, nb_point_list,
+                         color_list,
+                         marker_list=marker_list,
+                         fct_name=fct_names[j-1])
             if plot_error:
                 #error
                 ax = fig.add_subplot(nb_fct, nb_column, nb_column+ nb_column*(j-1))
-                add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, idx_row=j, log_scale=log_scale, fct_name=fct_names[j-1])
+                add_plot_error(d, ax, mc_list, type_mc,
+                               nb_point_list,
+                               error_type,
+                               color_list,
+                               marker_list = marker_list,
+                               log_scale=log_scale, fct_name=fct_names[j-1], nb_subsample=nb_subsample_nb_points)
         else:
             ax = fig.add_subplot(nb_fct, nb_column, nb_column+ nb_column*(j-1))
-            add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, log_scale=log_scale, fct_name=fct_names[j-1])
+            add_plot_error(d, ax, mc_list, type_mc,
+                           nb_point_list,
+                           error_type,
+                           color_list,
+                           marker_list = marker_list,
+                           log_scale=log_scale,
+                           fct_name=fct_names[j-1], nb_subsample=nb_subsample_nb_points)
         plt.tight_layout()
     if save_fig is not None:
         fig.savefig(save_fig, bbox_inches='tight')
@@ -524,38 +539,52 @@ def add_plot_functions(fig, plot_dim, nb_fct, fct,  idx_row, nb_column, fct_name
     if fct_name is not None:
         ax.set_title(r"$%s$"%fct_name)
 
-def add_plot_std(d, ax, mc_list, nb_point_list, color_list, idx_row, fct_name=None):
+def add_plot_std(d, ax, mc_list, nb_point_list, color_list, marker_list, fct_name=None):
     log_nb_pts = np.log([nb_point_list]).T
     type_mc = mc_list.keys()
     i=0
     for t in type_mc:
-        if t!="MCCV":
-            std_f = mc_list[t]["mc_results_f_{}".format(idx_row)]["std_"+ t]
-            reg_line, slope, std_reg = regression_line(nb_point_list, std_f)
-            label_with_slope = t+": slope={0:.2f}".format(slope)+ ", std={0:.2f}".format(std_reg)
-            ax.scatter(log_nb_pts, np.log(std_f), c=color_list[i],s=3, label=label_with_slope)
-            ax.plot(log_nb_pts, reg_line, c=color_list[i])
-            #ax.plot(log_nb_pts, reg_line + 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
-            #ax.plot(log_nb_pts, reg_line - 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
-            i=i+1
+        std_f = mc_list[t]["mc_results_" + fct_name]["std_"+ t]
+        reg_line, slope, std_reg = regression_line(nb_point_list, std_f)
+        label_with_slope = t+": slope={0:.2f}".format(slope)+ ", std={0:.2f}".format(std_reg)
+        ax.scatter(log_nb_pts, np.log(std_f),
+                   c=color_list[i],
+                   s=3,
+                   alpha=0.4,
+                   marker=marker_list[i],
+                   label=label_with_slope)
+        ax.plot(log_nb_pts, reg_line, c=color_list[i], alpha=0.5)
+        #ax.plot(log_nb_pts, reg_line + 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
+        #ax.plot(log_nb_pts, reg_line - 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
+        i=i+1
     if fct_name is not None:
         ax.set_title( r"For $%s$"%fct_name + " (d=%s)" %d)
     ax.set_xlabel(r"$\log(N) $ ")
     ax.set_ylabel(r"$\log(\sigma)$")
     ax.legend()
 
-def add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, log_scale, fct_name=None):
+def add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, marker_list, log_scale, fct_name=None, nb_subsample=None):
     i=0
     for t in type_mc:
         if error_type in ["SE", "Error"]:
             error_f = mc_list[t]["mc_results_"+fct_name]["error_"+ t]
             if error_type=="SE":
                 error_f = [e**2 for e in error_f]
+            if  nb_subsample is not None:
+                idx_subsample = _subsample_nb_points(nb_point_list, nb_subsample=nb_subsample)
+                nb_point_list = [nb_point_list[i] for i in idx_subsample]
+                error_f = [error_f[i] for i in idx_subsample]
             x = np.array(nb_point_list) +25*i
             nb_list_expended = [[n]*len(e) for n,e in zip(nb_point_list, error_f)]
-            ax.scatter(np.array(nb_list_expended) +25*i, error_f, c=color_list[i], s=0.1, label=t)
+            #print("here in plot", np.array(nb_list_expended), error_f)
+            ax.scatter(np.array(nb_list_expended) +25*i,
+                        error_f,
+                        c=color_list[i],
+                        s=1,
+                        marker=marker_list[i],
+                        label=t)
             ax.boxplot(error_f, positions=x.tolist(),
-                        widths = 30,
+                        widths = 20,
                         manage_ticks=False,
                         patch_artist=True, boxprops=dict(facecolor=color_list[i]),
                         whiskerprops=dict(color=color_list[i]),
@@ -595,3 +624,12 @@ def _nb_column_plot(plot_std, plot_error, plot_fct):
 #         print("test succeeded")
 #     else:
 #         print("test failed, error=", jaccobi_measure(x,jac_params)- expected)
+
+def _subsample_nb_points(my_list, nb_subsample=10):
+    first_index = 0
+    last_index = len(my_list) - 1
+    selected_indexes = [first_index,last_index]
+    step_size = (len(my_list) - 1) // (nb_subsample-2)
+    for i in range(1, nb_subsample-1):
+        selected_indexes.append(first_index + i * step_size)
+    return selected_indexes
