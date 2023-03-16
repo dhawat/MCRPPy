@@ -96,7 +96,9 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
             ## DPP pp
             time_start3 = time.time()
             if pool_dpp:
-                with Pool(nb_core) as pool:
+                with Pool(processes=nb_core) as pool:
+                    print("Number of processes in the DPP pool ",
+                          pool._processes)
                     dpp_points = pool.starmap(sample_dpp, [(d, nb_point_output) for _ in range(nb_sample)])
                     # Check nmber of core in use
                     num_cores = psutil.cpu_count()

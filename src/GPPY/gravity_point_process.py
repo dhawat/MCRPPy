@@ -69,7 +69,7 @@ class GravityPointProcess:
                 #print(x.shape)
         return x
 
-    def pushed_point_process(self, epsilon=None, p=None, stop_time=1, core_number=7, correction=True, multiprocess=True, q=0):
+    def pushed_point_process(self, epsilon=None, p=None, stop_time=1, core_number=7, correction=True, multiprocess=True, q=0, verbose=False):
         if epsilon is None:
             epsilon=self.epsilon_critical
         freeze_support()
@@ -81,21 +81,13 @@ class GravityPointProcess:
         # change to 7000 when core number =8
         if multiprocess and points_nb>1000:
             #print(core_number)
-            with Pool(core_number) as pool:
+            with Pool(processes=core_number) as pool:
+                if verbose:
+                    print("Number of processes in the pool ", pool._processes)
                 new_points = pool.map(
                     partial(self._pushed_point, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q),
                     list(range(points_nb)),
                 )
-            # Check nmber of core in use
-                num_cores = psutil.cpu_count()
-                # Get the percentage of CPU utilization for each core
-                cpu_percentages = psutil.cpu_percent(percpu=True)
-
-                # Calculate the number of cores currently being used
-                num_cores_used = sum([1 for percent in cpu_percentages if percent > 0])
-
-                print("Number of CPU cores: ", num_cores)
-                print("Number of CPU cores currently in use: ", num_cores_used)
             #pool.close()
         else:
             new_points = [self._pushed_point(k, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q) for k in range(points_nb)]
