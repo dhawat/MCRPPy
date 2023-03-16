@@ -22,6 +22,7 @@ import time
 import matplotlib.pyplot as plt
 from GPPY.spatial_windows import BallWindow, BoxWindow
 from GPPY.point_pattern import PointPattern
+import psutil
 
 
 def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names, exact_integrals=None, estimators=None, add_r_push=None,nb_point_cv=500, file_name=None, epsilon_push=None, nb_core=7,pool_dpp=True, **kwargs):
@@ -97,6 +98,17 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
             if pool_dpp:
                 with Pool(nb_core) as pool:
                     dpp_points = pool.starmap(sample_dpp, [(d, nb_point_output) for _ in range(nb_sample)])
+                    # Check nmber of core in use
+                    num_cores = psutil.cpu_count()
+                    # Get the percentage of CPU utilization for each core
+                    cpu_percentages = psutil.cpu_percent(percpu=True)
+
+                    # Calculate the number of cores currently being used
+                    num_cores_used = sum([1 for percent in cpu_percentages if percent > 0])
+
+                    print("Number of CPU cores: ", num_cores)
+                    print("Number of CPU cores currently in use: ", num_cores_used)
+
             else:
                 dpp_points = [sample_dpp(d, nb_point_output) for _ in range(nb_sample)]
             #rescale points to be in support_window
@@ -424,7 +436,7 @@ def error(approx, exact):
         return "NAN"
 
 
-def mse(mean, std, exact, verbose=True):
+def mse(mean, std, exact, verbose=False):
     #print(mean)
     if exact is not None:
         var = np.square(std)
