@@ -1,6 +1,7 @@
 from GPPY.gravity_point_process import GravityPointProcess
 from dppy.multivariate_jacobi_ope import MultivariateJacobiOPE
-from multiprocessing import Pool
+from multiprocessing.pool import Pool
+from multiprocessing import freeze_support
 import math
 import statsmodels.api as sm
 from GPPY.monte_carlo_test_functions import support_integrands_ball
@@ -96,20 +97,14 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
             ## DPP pp
             time_start3 = time.time()
             if pool_dpp:
+                freeze_support()
                 with Pool(processes=nb_core) as pool:
                     print("Number of processes in the DPP pool ",
                           pool._processes)
-                    dpp_points = pool.starmap(sample_dpp, [(d, nb_point_output) for _ in range(nb_sample)])
-                    # Check nmber of core in use
-                    num_cores = psutil.cpu_count()
-                    # Get the percentage of CPU utilization for each core
-                    cpu_percentages = psutil.cpu_percent(percpu=True)
+                    dpp_points = pool.starmap(sample_dpp, [(d, nb_point_output)]*nb_sample)
+                    pool.close()
+                    pool.join()
 
-                    # Calculate the number of cores currently being used
-                    num_cores_used = sum([1 for percent in cpu_percentages if percent > 0])
-
-                    print("Number of CPU cores: ", num_cores)
-                    print("Number of CPU cores currently in use: ", num_cores_used)
 
             else:
                 dpp_points = [sample_dpp(d, nb_point_output) for _ in range(nb_sample)]
@@ -171,24 +166,6 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
             time_end = time.time() - time_start11
             time_mc["MCCV"]=[int(time_end/60), time_end%60]
 
-        # MC kernel smoothing corrected (Delyon Portier)
-        #! commented because of its computational complexity
-        ##MC kernel smoothing corrected
-        # time_start10 = time.time()
-        # mcksc= mc_results_single_n(pp_list=binomial_pp, type_mc="MCKSc", mc_f_n=mcksc,
-        #                     nb_fct=nb_fct,
-        #                    correction=True)
-        # time_end = time.time() - time_start10
-        # time_mc["MCKSc"]=[int(time_end/60), time_end%60]
-        ##MC kernel smoothing corrected using h0
-         # MC kernel smoothing (Delyon Portier)
-        # time_start9 = time.time()
-        # mcks= mc_results_single_n(pp_list=binomial_pp, type_mc="MCKS", mc_f_n=mcks,
-        #                    nb_fct=nb_fct,
-        #                    correction=False)
-        # time_end = time.time() - time_start9
-        # time_mc["MCKS"]=[int(time_end/60), time_end%60]
-        ##MC kernel smoothing (Delyon Portier) using h0
         print("----------------------------------------------")
         if "MCPS" in estimators:
             print("N expected=", n, ", N obtained", nb_point_output, ", N sobol obtained =", nb_point_output_sobol)

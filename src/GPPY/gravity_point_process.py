@@ -3,7 +3,7 @@ from GPPY.point_pattern import PointPattern
 import numpy as np
 import copy
 #from numba import jit
-from multiprocessing import Pool, freeze_support
+from multiprocessing import Pool, freeze_support, active_children
 from functools import partial
 from GPPY.gravitational_force import force_k
 from GPPY.utils import sort_output_push_point, _sort_point_pattern, volume_unit_ball
@@ -84,10 +84,17 @@ class GravityPointProcess:
             with Pool(processes=core_number) as pool:
                 if verbose:
                     print("Number of processes in the pool ", pool._processes)
+                    # Report the number of active child processes
+                    children = active_children()
+                    print("Number of active child processes", len(children))
                 new_points = pool.map(
                     partial(self._pushed_point, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q),
                     list(range(points_nb)),
                 )
+                pool.close()
+                pool.join()
+
+
             #pool.close()
         else:
             new_points = [self._pushed_point(k, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q) for k in range(points_nb)]
