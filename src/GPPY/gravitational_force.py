@@ -80,6 +80,7 @@ def force_homogeneous(x, point_pattern, correction=True, p=None, kd_tree=None, q
 def force_k(k, x, point_pattern, inhomogeneous=False, **kwargs):
     points = point_pattern.points
     assert k <= points.shape[0] - 1
+    point_pattern = copy.deepcopy(point_pattern)
     point_pattern.points = np.delete(points, k, axis=0)
     if inhomogeneous:
         force_x = force_inhomogeneous(x, point_pattern, k=k, **kwargs)

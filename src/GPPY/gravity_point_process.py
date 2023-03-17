@@ -97,6 +97,7 @@ class GravityPointProcess:
 
             #pool.close()
         else:
+            print(range(points_nb))
             new_points = [self._pushed_point(k, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q) for k in range(points_nb)]
         return sort_output_push_point(new_points, epsilon)
 

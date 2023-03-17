@@ -472,27 +472,29 @@ def mc_f_dict(type_mc, se=True):
         d["error_"+type_mc]=[]
     return d
 #! TBC fct_name and fct_list
-def plot_mc_results(d, mc_list, nb_point_list, fct_list, fct_names, log_scale=True, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=False, plot_fct=False, nb_subsample_nb_points=None):
+def plot_mc_results(d, mc_list, nb_point_list, fct_list, fct_names, log_scale=True, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=False, plot_fct=False, nb_subsample_nb_points=None, type_mc=None):
     nb_fct = len(fct_list)
-    type_mc = mc_list.keys()
+    if type_mc is None:
+        type_mc = mc_list.keys()
     nb_column = _nb_column_plot(plot_std, plot_error, plot_fct)
     color_list = ["b", "k", "g", "m",  "orange", "gray", "c","y", "darkred", "pink"]
-    marker_list = [ "^", "v", "<", ">", "1","+", "x", ".", "*",]
-    fig= plt.figure(figsize=(int(5*nb_column),int(4*nb_fct)))
+    marker_list = [ "^", "v", "<", ">", "*","o", "x", "1", ".",]
+    fig= plt.figure(figsize=(int(5*nb_fct),int(4*nb_column)))
     for j in range(1, nb_fct+1) :
         #plot
         if plot_fct:
             add_plot_functions(fig, plot_dim, nb_fct=nb_fct,fct=fct_list[j-1], fct_name=fct_names[j-1], idx_row=j, nb_column=nb_column)
         if plot_std:
             #std
-            ax = fig.add_subplot(nb_fct, nb_column, nb_column + nb_column*(j-1))
+            ax = fig.add_subplot(nb_column, nb_fct, nb_column + nb_column*(j-1))
             add_plot_std(d, ax, mc_list, nb_point_list,
                          color_list,
                          marker_list=marker_list,
-                         fct_name=fct_names[j-1])
+                         fct_name=fct_names[j-1],
+                         type_mc=type_mc)
             if plot_error:
                 #error
-                ax = fig.add_subplot(nb_fct, nb_column, nb_column+ nb_column*(j-1))
+                ax = fig.add_subplot(nb_column, nb_fct, nb_column+ nb_column*(j-1))
                 add_plot_error(d, ax, mc_list, type_mc,
                                nb_point_list,
                                error_type,
@@ -500,7 +502,7 @@ def plot_mc_results(d, mc_list, nb_point_list, fct_list, fct_names, log_scale=Tr
                                marker_list = marker_list,
                                log_scale=log_scale, fct_name=fct_names[j-1], nb_subsample=nb_subsample_nb_points)
         else:
-            ax = fig.add_subplot(nb_fct, nb_column, nb_column+ nb_column*(j-1))
+            ax = fig.add_subplot( nb_column, nb_fct, nb_column+ nb_column*(j-1))
             add_plot_error(d, ax, mc_list, type_mc,
                            nb_point_list,
                            error_type,
@@ -530,9 +532,10 @@ def add_plot_functions(fig, plot_dim, nb_fct, fct,  idx_row, nb_column, fct_name
     if fct_name is not None:
         ax.set_title(r"$%s$"%fct_name)
 
-def add_plot_std(d, ax, mc_list, nb_point_list, color_list, marker_list, fct_name=None):
+def add_plot_std(d, ax, mc_list, nb_point_list, color_list, marker_list, fct_name=None, type_mc=None):
     log_nb_pts = np.log([nb_point_list]).T
-    type_mc = mc_list.keys()
+    if type_mc is None:
+        type_mc = mc_list.keys()
     i=0
     for t in type_mc:
         std_f = mc_list[t]["mc_results_" + fct_name]["std_"+ t]
@@ -544,7 +547,7 @@ def add_plot_std(d, ax, mc_list, nb_point_list, color_list, marker_list, fct_nam
                    alpha=0.4,
                    marker=marker_list[i],
                    label=label_with_slope)
-        ax.plot(log_nb_pts, reg_line, c=color_list[i], alpha=0.5)
+        ax.plot(log_nb_pts, reg_line, c=color_list[i], alpha=1)
         #ax.plot(log_nb_pts, reg_line + 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
         #ax.plot(log_nb_pts, reg_line - 3*std_reg, c=col[i], linestyle=(0, (5, 10)))
         i=i+1
@@ -619,8 +622,14 @@ def _nb_column_plot(plot_std, plot_error, plot_fct):
 def _subsample_nb_points(my_list, nb_subsample=10):
     first_index = 0
     last_index = len(my_list) - 1
-    selected_indexes = [first_index,last_index]
-    step_size = (len(my_list) - 1) // (nb_subsample-2)
-    for i in range(1, nb_subsample-1):
-        selected_indexes.append(first_index + i * step_size)
+    if nb_subsample == 5:
+        midle_index = len(my_list)//2
+        left_midle_index = (midle_index - first_index)//2
+        right_midle_index = midle_index + left_midle_index
+        selected_indexes = [first_index, left_midle_index, midle_index,right_midle_index, last_index]
+    else:
+        selected_indexes = [first_index,last_index]
+        step_size = (len(my_list) - 1) // (nb_subsample-2)
+        for i in range(1, nb_subsample-1):
+            selected_indexes.append(first_index + i * step_size)
     return selected_indexes
