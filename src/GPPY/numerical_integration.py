@@ -35,7 +35,7 @@ def estimate_control_variate_parameter(points, f, proposal):
     denominator = sum(a**2)
     return numerator/denominator
 #todo add test
-def estimate_control_variate_proposal(points, f, poly_degree=2, plot=True):
+def estimate_control_variate_proposal(points, f, poly_degree=2, plot=False):
     y = f(points)
     # create a polynomial features object to create 'poly_degree' degree polynomial features
     poly = PolynomialFeatures(degree=poly_degree, include_bias=False)
@@ -63,7 +63,6 @@ def estimate_control_variate_proposal(points, f, poly_degree=2, plot=True):
     if poly_degree==2:
         d = points.shape[1]
         mean_proposal = 11*model.intercept_/12 + (proposal(np.array([[-1]*d])) + proposal(np.array([[1]*d])))/24
-        print("coef", model.coef_, "intercept", model.intercept_)
     elif poly_degree==1:
         mean_proposal= model.intercept_
     else:
