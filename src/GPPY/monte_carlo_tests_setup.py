@@ -97,8 +97,7 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
             if pool_dpp:
                 freeze_support()
                 with Pool(processes=nb_core) as pool:
-                    print("Number of processes in the DPP pool ",
-                          pool._processes)
+                    #print("Number of processes in the DPP pool ",pool._processes)
                     dpp_points = pool.starmap(sample_dpp, [(d, nb_point_output)]*nb_sample)
                     pool.close()
                     pool.join()
@@ -159,6 +158,8 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
             #MC Control variate
             time_start11 = time.time()
             #support_window_cv = support_integrands_ball(d)
+            binomial_pp = [PointPattern(points=support_window.rand(n=nb_point_output), window=support_window)
+                            for _ in range(nb_sample)]
             MCCV = mc_results_single_n(pp_list=binomial_pp, type_mc="MCCV",
                                        mc_f_n=MCCV, fct_list=fct_list,fct_names=fct_names, exact_integrals=exact_integrals, nb_point_cv=nb_point_cv, support_window_cv=support_window)
             time_end = time.time() - time_start11
