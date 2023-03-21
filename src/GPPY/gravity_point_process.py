@@ -66,7 +66,6 @@ class GravityPointProcess:
             #using force with correction
             else:
                 x = x - epsilon_matrix * force_k(k=k, x=x, point_pattern=point_pattern,  **kwargs)
-                #print(x.shape)
         return x
 
     def pushed_point_process(self, epsilon=None, p=None, stop_time=1, core_number=7, correction=True, multiprocess=True, q=0, verbose=False):
@@ -80,7 +79,6 @@ class GravityPointProcess:
         points_nb = self.point_pattern.points.shape[0]
         # change to 7000 when core number =8
         if multiprocess and points_nb>1000:
-            #print(core_number)
             with Pool(processes=core_number) as pool:
                 if verbose:
                     print("Number of processes in the pool ", pool._processes)
@@ -93,11 +91,7 @@ class GravityPointProcess:
                 )
                 pool.close()
                 pool.join()
-
-
-            #pool.close()
         else:
-            print(range(points_nb))
             new_points = [self._pushed_point(k, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q) for k in range(points_nb)]
         return sort_output_push_point(new_points, epsilon)
 
