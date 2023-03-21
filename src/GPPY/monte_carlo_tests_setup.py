@@ -573,7 +573,7 @@ def add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_lis
             ax.scatter(np.array(nb_list_expended) +25*i,
                         error_f,
                         c=color_list[i],
-                        s=1,
+                        s=5,
                         marker=marker_list[i],
                         label=t)
             ax.boxplot(error_f, positions=x.tolist(),
