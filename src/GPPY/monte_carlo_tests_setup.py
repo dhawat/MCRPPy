@@ -4,7 +4,6 @@ from multiprocessing.pool import Pool
 from multiprocessing import freeze_support
 import math
 import statsmodels.api as sm
-from GPPY.monte_carlo_test_functions import support_integrands_ball
 from GPPY.numerical_integration import (monte_carlo_integration,
                                         sobol_sequence,
                                         sobol_point_pattern,
@@ -15,7 +14,6 @@ from GPPY.numerical_integration import (monte_carlo_integration,
                                        bandwidth_0_delyon_portier)
 import statistics as stat
 from scipy import stats
-from sklearn.linear_model import LinearRegression
 import numpy as np
 import pandas as pd
 import pickle
@@ -368,7 +366,7 @@ def _binomial_pp_ball(d, window, nb_point, nb_sample, add_r=None):
     else:
         print("Restart kernel")
     if add_r is None:
-        add_r=r
+        add_r=0
     r += add_r
     rho = nb_point/window.volume
     simu_window = BallWindow(center=[0]*d, radius=r) #simulation window
@@ -543,8 +541,8 @@ def add_plot_std(d, ax, mc_list, nb_point_list, color_list, marker_list, fct_nam
         label_with_slope = t+": slope={0:.2f}".format(slope)+ ", std={0:.2f}".format(std_reg)
         ax.scatter(log_nb_pts, np.log(std_f),
                    c=color_list[i],
-                   s=3,
-                   alpha=0.4,
+                   s=20,
+                   alpha=0.5,
                    marker=marker_list[i],
                    label=label_with_slope)
         ax.plot(log_nb_pts, reg_line, c=color_list[i], alpha=1)
