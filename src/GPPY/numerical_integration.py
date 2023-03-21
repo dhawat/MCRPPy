@@ -47,9 +47,6 @@ def estimate_control_variate_proposal(points, f, poly_degree=2, plot=True):
     model.fit(points_poly, y)
     # the regressed model
     proposal = lambda x: model.predict(poly.fit_transform(x))
-    #proposal = lambda x: np.sum(model.coef_*x, axis=1) + model.intercept_
-    # mean of proposal for centered uniform law
-    mean_proposal = model.intercept_
     if plot and points.shape[1]==2:
         x = np.linspace(-1/2,1/2, 100)
         X, Y = np.meshgrid(x, x)
@@ -62,6 +59,16 @@ def estimate_control_variate_proposal(points, f, poly_degree=2, plot=True):
         ax.scatter3D(X.ravel(), Y.ravel(), proposal(z), c=proposal(z))
         ax.set_title("Control variate proposal")
         plt.show()
+    # mean of proposal for centered uniform law
+    if poly_degree==2:
+        d = points.shape[1]
+        mean_proposal = 11*model.intercept_/12 + (proposal(np.array([[-1]*d])) + proposal(np.array([[1]*d])))/24
+        print("coef", model.coef_, "intercept", model.intercept_)
+    elif poly_degree==1:
+        mean_proposal= model.intercept_
+    else:
+        mean_proposal=None
+        print("Actually the mean of the proposal is only available for polynomial proposal of degree at 1 or 2")
     return proposal, mean_proposal
 
 def sobol_sequence(window, nb_points, discrepancy=False, **kwargs):
