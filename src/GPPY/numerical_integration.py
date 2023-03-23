@@ -59,7 +59,7 @@ def estimate_control_variate_proposal(points, f, poly_degree=2, plot=False):
         ax.scatter3D(X.ravel(), Y.ravel(), proposal(z), c=proposal(z))
         ax.set_title("Control variate proposal")
         plt.show()
-    # mean of proposal for centered uniform law
+    # mean of proposal for centered uniform law over the unit cube
     if poly_degree==2:
         d = points.shape[1]
         mean_proposal = 11*model.intercept_/12 + (proposal(np.array([[-1]*d])) + proposal(np.array([[1]*d])))/24
