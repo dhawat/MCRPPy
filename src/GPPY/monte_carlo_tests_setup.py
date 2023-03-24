@@ -194,11 +194,12 @@ def mc_results_single_n( pp_list, type_mc, fct_list, fct_names,
         for name in fct_names:
             mc_f_n["mc_results_" +name] = mc_f_dict(type_mc=type_mc)
     i=0
+    if type_mc=="MCCV":
+        points_cv_proposal= support_window_cv.rand(n=nb_point_cv, seed=0)
+        points_cv_param_estimate= support_window_cv.rand(n=nb_point_cv, seed=1)
     for f,name in zip(fct_list, fct_names):
         if type_mc=="MCCV":
-            points_cv_proposal= support_window_cv.rand(n=nb_point_cv, seed=0)
             proposal, m_proposal = estimate_control_variate_proposal(points=points_cv_proposal, f=f)
-            points_cv_param_estimate= support_window_cv.rand(n=nb_point_cv, seed=1)
             c = estimate_control_variate_parameter(points=points_cv_param_estimate, f=f, proposal=proposal)
             mc_values=[control_variate_integration(points=p.points,
                                                    f=f,

@@ -36,6 +36,7 @@ def estimate_control_variate_parameter(points, f, proposal):
     return numerator/denominator
 #todo add test
 def estimate_control_variate_proposal(points, f, poly_degree=2, plot=False):
+    d = points.shape[1]
     y = f(points)
     # create a polynomial features object to create 'poly_degree' degree polynomial features
     poly = PolynomialFeatures(degree=poly_degree, include_bias=False)
@@ -47,6 +48,7 @@ def estimate_control_variate_proposal(points, f, poly_degree=2, plot=False):
     model.fit(points_poly, y)
     # the regressed model
     proposal = lambda x: model.predict(poly.fit_transform(x))
+    print("coef", model.coef_)
     if plot and points.shape[1]==2:
         x = np.linspace(-1/2,1/2, 100)
         X, Y = np.meshgrid(x, x)
@@ -62,13 +64,36 @@ def estimate_control_variate_proposal(points, f, poly_degree=2, plot=False):
     # mean of proposal for centered uniform law over the unit cube
     if poly_degree==2:
         d = points.shape[1]
-        mean_proposal = 11*model.intercept_/12 + (proposal(np.array([[-1]*d])) + proposal(np.array([[1]*d])))/24
+        mean_proposal = model.intercept_ + _find_sum_of_coef_of_cubic_term(proposal, d)/12
+        print("Mean proposal theoretical:", mean_proposal, "Estiamted:", np.mean(proposal(points)) )
     elif poly_degree==1:
         mean_proposal= model.intercept_
     else:
-        mean_proposal=None
-        print("Actually the mean of the proposal is only available for polynomial proposal of degree at 1 or 2")
+        mean_proposal=np.mean(proposal(points))
     return proposal, mean_proposal
+
+def _find_sum_of_coef_of_cubic_term(poly, d):
+    """Function used to find the sum of the coefficient of the quadratic terms in a polynomial regression of degree 2. Used to find the mean of the proposal in ``estimate_control_variate_proposal``.
+
+    _extended_summary_
+
+    Args:
+        poly (_type_): _description_
+        d (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    eval_points = []
+    for i in range(0,d):
+        x = np.zeros((1,d))
+        y = np.zeros((1,d))
+        y[:,i] = -1
+        eval_points.append(y)
+        x[:,i] = 1
+        eval_points.append(x)
+
+    return (sum(poly(p) for p in eval_points) - 2*d*poly(np.zeros((1,d))))/2
 
 def sobol_sequence(window, nb_points, discrepancy=False, **kwargs):
     #https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html
