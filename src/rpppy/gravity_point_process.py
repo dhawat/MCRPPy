@@ -9,7 +9,6 @@ from rpppy.coulomb_force import force_k
 from rpppy.utils import sort_output_push_point, _sort_point_pattern, volume_unit_ball
 from scipy.spatial import KDTree
 from rpppy.spatial_windows import subwindow_parameter_max
-import psutil
 
 class GravityPointProcess:
     def __init__(self, point_pattern):

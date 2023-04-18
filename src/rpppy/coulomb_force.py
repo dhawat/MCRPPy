@@ -29,7 +29,7 @@ def force_base(x, points, intensity=None, correction=True):
     return force_x
 
 
-def force_k(x, point_pattern, correction=True, p=None, kd_tree=None, q=0, k=None):
+def force_k(k, points, intensity, correction=True, p=None, kd_tree=None):
     """ Coulombic force exerted by the points in the point_pattern (deprived of x) on x.
     If p is not None, it corresponds to the force exerted by the points in an annulus centered at x with small radius q and large radius p.
     Args:
@@ -44,20 +44,19 @@ def force_k(x, point_pattern, correction=True, p=None, kd_tree=None, q=0, k=None
     Returns:
         _type_: _description_
     """
-    point_pattern = copy.deepcopy(point_pattern)
-    points = point_pattern.points
-    intensity = point_pattern.intensity
+    x = points[k]
     assert k <= points.shape[0] - 1
-    # removing the point x from point_pattern
-    point_pattern.points = np.delete(points, k, axis=0)
     if p is not None:
-            points = _select_point_in_annulus(x, idx_x=k, kd_tree=kd_tree, p=p, q=q)
+            points = _select_point_in_ball(idx_x=k, points=points, kd_tree=kd_tree, p=p)
+    else:
+        # removing the point x from point_pattern
+        points = np.delete(points, k, axis=0)
     force_x = force_base(x, points, intensity=intensity, correction=correction)
     return force_x
 
 
-def _select_point_in_annulus(x, idx_x, kd_tree, p, q=0):
-    """Select the points in the annulus of small radius q and large radius p around x.
+def _select_point_in_ball(idx_x, points, kd_tree, p):
+    """Select the points in the ball of radius p centered at x.
 
     Args:
         x (_type_): _description_
@@ -66,14 +65,8 @@ def _select_point_in_annulus(x, idx_x, kd_tree, p, q=0):
         p (_type_): annulus large radius.
         q (int, optional): annulus small radius. Defaults to 0.
     """
-    if q==0:
-        idx_points_in_annulus_ = kd_tree.query_ball_point(x=x.ravel(), r=p)
-        idx_points_in_annulus_.remove(idx_x)
-        idx_points_in_annulus = [i if i<idx_x else i-1 for i in idx_points_in_annulus_] #kd tree is built on all points (without removing k)
-        points = points[idx_points_in_annulus]
-    else:
-        #! add warning that this method may have memory problems while using multiprocessing?
-        window = AnnulusWindow(center=x.ravel(), large_radius=p, small_radius=q)
-        idx_points_in_window = window.indicator_function(points)
-        points = points[idx_points_in_window]
-    return points
+    x = points[idx_x]
+    idx_points_in_window = kd_tree.query_ball_point(x=x.ravel(), r=p)
+    idx_points_in_window.remove(idx_x)
+    #idx_points_in_annulus = [i if i<idx_x else i-1 for i in idx_points_in_window] #kd tree is built on all points (without removing k)
+    return points[idx_points_in_window]
