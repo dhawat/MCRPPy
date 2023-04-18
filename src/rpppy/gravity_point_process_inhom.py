@@ -1,15 +1,14 @@
 from curses import window
-from GPPY.point_pattern import PointPattern
+from rpppy.point_pattern import PointPattern
 import numpy as np
 import copy
 #from numba import jit
-from multiprocessing import Pool, freeze_support, active_children
+from multiprocessing import Pool, freeze_support
 from functools import partial
-from GPPY.gravitational_force import force_k
-from GPPY.utils import sort_output_push_point, _sort_point_pattern, volume_unit_ball
+from rpppy.coulomb_force import force_k
+from rpppy.utils import sort_output_push_point, _sort_point_pattern, volume_unit_ball
 from scipy.spatial import KDTree
-from GPPY.spatial_windows import subwindow_parameter_max
-import psutil
+from rpppy.spatial_windows import subwindow_parameter_max
 
 class GravityPointProcess:
     def __init__(self, point_pattern):
@@ -66,9 +65,10 @@ class GravityPointProcess:
             #using force with correction
             else:
                 x = x - epsilon_matrix * force_k(k=k, x=x, point_pattern=point_pattern,  **kwargs)
+                #print(x.shape)
         return x
 
-    def pushed_point_process(self, epsilon=None, p=None, stop_time=1, core_number=7, correction=True, multiprocess=True, q=0, verbose=False):
+    def pushed_point_process(self, epsilon=None, p=None, stop_time=1, core_number=7, correction=True, multiprocess=True, q=0):
         if epsilon is None:
             epsilon=self.epsilon_critical
         freeze_support()
@@ -77,20 +77,15 @@ class GravityPointProcess:
         else:
             points_kd_tree=None
         points_nb = self.point_pattern.points.shape[0]
-        # change to 7000 when core number =8
+        # change to 7000 for nb_core=8
         if multiprocess and points_nb>1000:
-            with Pool(processes=core_number) as pool:
-                if verbose:
-                    print("Number of processes in the pool ", pool._processes)
-                    # Report the number of active child processes
-                    children = active_children()
-                    print("Number of active child processes", len(children))
+            print(core_number)
+            with Pool(core_number) as pool:
                 new_points = pool.map(
                     partial(self._pushed_point, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q),
                     list(range(points_nb)),
                 )
-                pool.close()
-                pool.join()
+            #pool.close()
         else:
             new_points = [self._pushed_point(k, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q) for k in range(points_nb)]
         return sort_output_push_point(new_points, epsilon)
@@ -124,8 +119,7 @@ class GravityPointProcess:
 
 
 
-def epsilon_critical(d, intensity):
-    return 1/(2*d*volume_unit_ball(d)*intensity)
+
 # @jit
 # def fast_push_point(points, intensity, epsilon, stop_time):
 #     points_nb = points.shape[0]
@@ -136,3 +130,28 @@ def epsilon_critical(d, intensity):
 #             x = x - epsilon * force_k(k=j, x=x, points=points, intensity=intensity)
 #         push.append(x)
 #     return np.vstack(push)
+
+
+# def force_inhomogeneous(x, point_pattern, betta, correction=True):
+#     r"""
+#     .. math::
+#             F(x) = \frac{\batta}{\rho(x)}(\sum_{z \in \mathcal{Z}, \|z\|_2 \uparrow} \limits \frac{z-x}{ \|z-x\|_2^d} + \kappa_d x)
+
+#     Args:
+#         x (_type_): 1 times d array
+#         points (_type_): N times d array arrange by increasing Euclidean distance from the origine.
+#         intensity (_type_): _description_
+#     """
+#     points = point_pattern.points
+#     intensity = point_pattern.intensity
+#     d = points.shape[1]
+#     x = np.atleast_2d(x)
+#     numerator = (points - x).astype("float")
+#     denominator = intensity(points)*(np.linalg.norm(numerator, axis=1) ** d)
+#     np.divide(numerator, np.atleast_2d(denominator).T, out=numerator)
+#     kappa_d = volume_unit_ball(d)
+#     if correction:
+#         force_x = np.sum(numerator, axis=0) + kappa_d * x
+#     else:
+#         force_x = np.atleast_2d(np.sum(numerator, axis=0))
+#     return force_x*betta/intensity(x) #! remove intensity(x)

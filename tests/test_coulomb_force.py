@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
-from GPPY.gravitational_force import force_base, force_k, force_homogeneous
-from GPPY.utils import volume_unit_ball
+from rpppy.coulomb_force import force_base, force_k
+from rpppy.utils import volume_unit_ball
 from structure_factor.point_pattern import PointPattern
 from structure_factor.spatial_windows import BallWindow
 

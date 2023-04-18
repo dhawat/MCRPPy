@@ -1,6 +1,6 @@
 import numpy as np
-from GPPY.spatial_windows import UnitBallWindow, BoxWindow, BallWindow
-from GPPY.point_pattern import PointPattern
+from rpppy.spatial_windows import UnitBallWindow, BoxWindow, BallWindow
+from rpppy.point_pattern import PointPattern
 import scipy as sp
 import statistics as stat
 import warnings

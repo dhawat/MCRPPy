@@ -1,10 +1,10 @@
-from GPPY.gravity_point_process import GravityPointProcess
+from rpppy.gravity_point_process import GravityPointProcess
 from dppy.multivariate_jacobi_ope import MultivariateJacobiOPE
 from multiprocessing.pool import Pool
 from multiprocessing import freeze_support
 import math
 import statsmodels.api as sm
-from GPPY.numerical_integration import (monte_carlo_integration,
+from rpppy.numerical_integration import (monte_carlo_integration,
                                         sobol_sequence,
                                         sobol_point_pattern,
                                         control_variate_integration,
@@ -19,8 +19,8 @@ import pandas as pd
 import pickle
 import time
 import matplotlib.pyplot as plt
-from GPPY.spatial_windows import BallWindow, BoxWindow
-from GPPY.point_pattern import PointPattern
+from rpppy.spatial_windows import BallWindow, BoxWindow
+from rpppy.point_pattern import PointPattern
 import psutil
 
 

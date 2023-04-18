@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from GPPY.utils import sort_points_by_increasing_distance, sort_output_push_point
+from rpppy.utils import sort_points_by_increasing_distance, sort_output_push_point
 
 
 def test_sort_points_by_inc_dist():

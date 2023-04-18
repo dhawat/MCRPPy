@@ -1,5 +1,5 @@
 import pytest
-from GPPY.gravity_point_process import GravityPointProcess
+from rpppy.gravity_point_process import GravityPointProcess
 from structure_factor.point_pattern import PointPattern
 from structure_factor.spatial_windows import BallWindow
 import numpy as np

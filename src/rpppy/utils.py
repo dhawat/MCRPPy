@@ -1,5 +1,5 @@
 import numpy as np
-from GPPY.spatial_windows import UnitBallWindow, BallWindow
+from rpppy.spatial_windows import UnitBallWindow, BallWindow
 from scipy.spatial import KDTree
 
 def sort_points_by_increasing_distance(points):

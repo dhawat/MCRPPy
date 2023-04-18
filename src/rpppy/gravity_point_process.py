@@ -1,14 +1,15 @@
 from curses import window
-from GPPY.point_pattern import PointPattern
+from rpppy.point_pattern import PointPattern
 import numpy as np
 import copy
 #from numba import jit
-from multiprocessing import Pool, freeze_support
+from multiprocessing import Pool, freeze_support, active_children
 from functools import partial
-from GPPY.gravitational_force import force_k
-from GPPY.utils import sort_output_push_point, _sort_point_pattern, volume_unit_ball
+from rpppy.coulomb_force import force_k
+from rpppy.utils import sort_output_push_point, _sort_point_pattern, volume_unit_ball
 from scipy.spatial import KDTree
-from GPPY.spatial_windows import subwindow_parameter_max
+from rpppy.spatial_windows import subwindow_parameter_max
+import psutil
 
 class GravityPointProcess:
     def __init__(self, point_pattern):
@@ -65,10 +66,9 @@ class GravityPointProcess:
             #using force with correction
             else:
                 x = x - epsilon_matrix * force_k(k=k, x=x, point_pattern=point_pattern,  **kwargs)
-                #print(x.shape)
         return x
 
-    def pushed_point_process(self, epsilon=None, p=None, stop_time=1, core_number=7, correction=True, multiprocess=True, q=0):
+    def pushed_point_process(self, epsilon=None, p=None, stop_time=1, core_number=7, correction=True, multiprocess=True, q=0, verbose=False):
         if epsilon is None:
             epsilon=self.epsilon_critical
         freeze_support()
@@ -77,15 +77,20 @@ class GravityPointProcess:
         else:
             points_kd_tree=None
         points_nb = self.point_pattern.points.shape[0]
-        # change to 7000 for nb_core=8
+        # change to 7000 when core number =8
         if multiprocess and points_nb>1000:
-            print(core_number)
-            with Pool(core_number) as pool:
+            with Pool(processes=core_number) as pool:
+                if verbose:
+                    print("Number of processes in the pool ", pool._processes)
+                    # Report the number of active child processes
+                    children = active_children()
+                    print("Number of active child processes", len(children))
                 new_points = pool.map(
                     partial(self._pushed_point, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q),
                     list(range(points_nb)),
                 )
-            #pool.close()
+                pool.close()
+                pool.join()
         else:
             new_points = [self._pushed_point(k, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q) for k in range(points_nb)]
         return sort_output_push_point(new_points, epsilon)
@@ -119,7 +124,8 @@ class GravityPointProcess:
 
 
 
-
+def epsilon_critical(d, intensity):
+    return 1/(2*d*volume_unit_ball(d)*intensity)
 # @jit
 # def fast_push_point(points, intensity, epsilon, stop_time):
 #     points_nb = points.shape[0]
