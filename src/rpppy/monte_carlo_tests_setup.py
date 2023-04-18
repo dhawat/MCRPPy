@@ -1,4 +1,4 @@
-from rpppy.gravity_point_process import GravityPointProcess
+from rpppy.repelled_point_process import RepelledPointProcess
 from dppy.multivariate_jacobi_ope import MultivariateJacobiOPE
 from multiprocessing.pool import Pool
 from multiprocessing import freeze_support
@@ -329,13 +329,13 @@ def samples_push(d, support_window, nb_point, nb_sample, father_type="Binomial",
         #print("herere", len(father_pp_list))
     else:
         raise ValueError("type are Binomial and Sobol")
-    gpp_pp = [GravityPointProcess(p) for p in father_pp_list]
+    gpp_pp = [RepelledPointProcess(p) for p in father_pp_list]
     if epsilon is None:
         epsilon = gpp_pp[0].epsilon_critical
     print("N Big=", father_pp_list[0].points.shape[0],
           ", N expected =", nb_point, ", Epsilon=", epsilon)
     #time_start = time.time()
-    push_pp_big = [g.pushed_point_pattern(epsilon=epsilon,
+    push_pp_big = [g.repelled_point_pattern(epsilon=epsilon,
                                             **kwargs)
                     for g in gpp_pp]
     push_pp = [g.restrict_to_window(support_window) for g in push_pp_big]
