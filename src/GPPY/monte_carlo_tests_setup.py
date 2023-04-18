@@ -582,6 +582,7 @@ def add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_lis
                         manage_ticks=False,
                         patch_artist=True, boxprops=dict(facecolor=color_list[i]),
                         whiskerprops=dict(color=color_list[i]),
+                        showmeans=True,
                         #showmeans=True,
                         #meanprops=dict(marker='.', color='r', markeredgecolor='r'),
                         sym='',
