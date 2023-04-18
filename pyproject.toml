@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "gppy"
+name = "rpppy"
 version = "0.1.0"
 description = "Simulating a pushed point process from a Poisson point process"
 license = "MIT"

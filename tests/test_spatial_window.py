@@ -2,7 +2,7 @@ from inspect import Parameter
 import numpy as np
 import pytest
 
-from GPPY.spatial_windows import AnnulusWindow
+from rpppy.spatial_windows import AnnulusWindow
 from structure_factor.utils import get_random_number_generator
 
 ##### BallWindow

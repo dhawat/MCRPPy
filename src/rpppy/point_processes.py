@@ -13,8 +13,8 @@ import numpy as np
 import scipy.linalg as la
 from scipy.spatial import KDTree
 
-from GPPY.point_pattern import PointPattern
-from GPPY.spatial_windows import (
+from rpppy.point_pattern import PointPattern
+from rpppy.spatial_windows import (
     AbstractSpatialWindow,
     BallWindow,
     BoxWindow,
