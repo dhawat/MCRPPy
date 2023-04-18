@@ -1,7 +1,5 @@
 import numpy as np
 from rpppy.utils import volume_unit_ball
-import copy
-from rpppy.spatial_windows import AnnulusWindow
 
 def force_base(x, points, intensity=None, correction=True):
     r"""
@@ -31,14 +29,13 @@ def force_base(x, points, intensity=None, correction=True):
 
 def force_k(k, points, intensity, correction=True, p=None, kd_tree=None):
     """ Coulombic force exerted by the points in the point_pattern (deprived of x) on x.
-    If p is not None, it corresponds to the force exerted by the points in an annulus centered at x with small radius q and large radius p.
+    If p is not None, it corresponds to the force exerted by the points in an ball centered at x of radius p.
     Args:
         x (_type_): _description_
         point_pattern (_type_): _description_
         correction (bool, optional): _description_. Defaults to True.
         p (_type_, optional): _description_. Defaults to None.
         kd_tree (_type_, optional): _description_. Defaults to None.
-        q (int, optional): _description_. Defaults to 0.
         k (_type_, optional): _description_. Defaults to None.
 
     Returns:
@@ -63,7 +60,6 @@ def _select_point_in_ball(idx_x, points, kd_tree, p):
         idx_x (_type_): index of x in the kd_tree
         kd_tree (_type_): kd_tree of points
         p (_type_): annulus large radius.
-        q (int, optional): annulus small radius. Defaults to 0.
     """
     x = points[idx_x]
     idx_points_in_window = kd_tree.query_ball_point(x=x.ravel(), r=p)

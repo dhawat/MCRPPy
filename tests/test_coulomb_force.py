@@ -3,8 +3,6 @@ import pytest
 from rpppy.coulomb_force import force_base, force_k, _select_point_in_ball
 from scipy.spatial import KDTree
 from rpppy.utils import volume_unit_ball
-from structure_factor.point_pattern import PointPattern
-from structure_factor.spatial_windows import BallWindow
 
 @pytest.mark.parametrize(
     "n, d, intensity, x, test",
@@ -26,17 +24,16 @@ def test_force_base_from_point_with_mass(n, d, intensity, x, test):
         expected = [np.atleast_2d(f_1), np.atleast_2d(f_2)]
     np.testing.assert_array_almost_equal(result, expected)
 
-#todo repasse over this test
 @pytest.mark.parametrize(
     "k, points, intensity, expected",
     [
-        (2, 1, np.full((4, 2), 1), -3 / 2),
-        (1, np.array([[1]*4, [0]*4, [1]*4, [1]*4]), 1, np.full((1, 4), -3 / 16)),
+        (2, np.array([[1, 1], [-1, 1], [0, 0], [0, 1]]), 1/np.pi, np.array([[0, -2]])),
+        (1, np.array([[1]*4, [0]*4, [1]*4, [1]*4]), 1, np.full((1, 4),-3 / 16)),
         (
             2,
-            np.array([[0, 1], [2, 0], [1, 0], [-1, 4], [-5, 6]]),
+            np.array([[0, 1], [2, 0], [1, 0], [-1, 4]]),
             1,
-            np.array([[-5 / 12 - np.pi, -7 / 12]]),
+            np.array([[-2/5 - np.pi, -7 / 10]]),
         ),
     ],
 )
@@ -44,6 +41,28 @@ def test_force_k(k, points, intensity, expected):
     "test on simple data"
     result = force_k(k, points, intensity)
     np.testing.assert_array_almost_equal(result, expected)
+
+# test force_k with p not None
+@pytest.mark.parametrize(
+    "k, points, intensity, p, expected",
+    [
+        (2, np.array([[1, 1], [-1, 1], [0, 0], [0, 1]]), 1/np.pi, 10, np.array([[0, -2]])),
+        (1, np.array([[1, 2, -1], [0]*3, [6, -3, 17]]), 7, np.sqrt(7), np.array([[-1/(6*np.sqrt(6)), -1/(3*np.sqrt(6)), 1/(6*np.sqrt(6))]])),
+        (
+            2,
+            np.array([[0, 1], [2, 0], [1, 0], [-1, 4]]),
+            1, 2,
+            np.array([[-1/2 - np.pi, -1/2]]),
+        ),
+    ],
+)
+def test_force_k_p(k, points, intensity, p, expected):
+    "test on simple data"
+    kd_tree = KDTree(points)
+    result = force_k(k, points, intensity, p=p, kd_tree=kd_tree)
+    np.testing.assert_array_almost_equal(result, expected)
+
+# test _select_point_in_ball
 @pytest.mark.parametrize(
     "idx, p",
     [(1, 1),
@@ -53,7 +72,7 @@ def test_force_k(k, points, intensity, expected):
      (4, 3)]
 )
 
-def test_select_point_in_annulus(idx, p):
+def test_select_point_in_ball(idx, p):
     points = np.array([[0,1], [1,0],
                        [1/2, 1/2], [2,1],
                        [1.01, 0], [-1/2, 1],
