@@ -23,14 +23,13 @@ def _sort_point_pattern(point_pattern):
     point_pattern.points = sort_points_by_increasing_distance(point_pattern.points)
     return point_pattern
 
-def indicator_annulus_window(points, center, small_radius, large_radius):
-    large_window = BallWindow(center, large_radius)
-    if small_radius == 0:
-        indicator = large_window.indicator_function(points)
-    else:
-        small_window = BallWindow(center, small_radius)
-    return indicator
-
+# def indicator_annulus_window(points, center, small_radius, large_radius):
+#     large_window = BallWindow(center, large_radius)
+#     if small_radius == 0:
+#         indicator = large_window.indicator_function(points)
+#     else:
+#         small_window = BallWindow(center, small_radius)
+#     return indicator
 
 # utils for monte_carlo_methods
 def _find_sum_of_coef_of_cubic_term(poly, d):
