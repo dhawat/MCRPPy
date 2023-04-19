@@ -30,3 +30,28 @@ def indicator_annulus_window(points, center, small_radius, large_radius):
     else:
         small_window = BallWindow(center, small_radius)
     return indicator
+
+
+# utils for monte_carlo_methods
+def _find_sum_of_coef_of_cubic_term(poly, d):
+    """Function used to find the sum of the coefficient of the quadratic terms in a polynomial regression of degree 2. Used to find the mean of the proposal in ``estimate_control_variate_proposal``.
+
+    _extended_summary_
+
+    Args:
+        poly (_type_): _description_
+        d (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    eval_points = []
+    for i in range(0,d):
+        x = np.zeros((1,d))
+        y = np.zeros((1,d))
+        y[:,i] = -1
+        eval_points.append(y)
+        x[:,i] = 1
+        eval_points.append(x)
+
+    return (sum(poly(p) for p in eval_points) - 2*d*poly(np.zeros((1,d))))/2
