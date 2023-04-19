@@ -52,7 +52,7 @@ def test_force_k(k, points, intensity, expected):
             2,
             np.array([[0, 1], [2, 0], [1, 0], [-1, 4]]),
             1, 2,
-            np.array([[-1/2 - np.pi, -1/2]]),
+            np.array([[-1/2, -1/2]]),
         ),
     ],
 )

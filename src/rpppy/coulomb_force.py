@@ -27,7 +27,7 @@ def force_base(x, points, intensity=None, correction=True):
     return force_x
 
 
-def force_k(k, points, intensity, correction=True, p=None, kd_tree=None):
+def force_k(k, points, intensity,  p=None, kd_tree=None):
     """ Coulombic force exerted by the points in the point_pattern (deprived of x) on x.
     If p is not None, it corresponds to the force exerted by the points in an ball centered at x of radius p.
     Args:
@@ -44,11 +44,12 @@ def force_k(k, points, intensity, correction=True, p=None, kd_tree=None):
     x = points[k]
     assert k <= points.shape[0] - 1
     if p is not None:
-            points = _select_point_in_ball(idx_x=k, points=points, kd_tree=kd_tree, p=p)
+        points = _select_point_in_ball(idx_x=k, points=points, kd_tree=kd_tree, p=p)
+        force_x = force_base(x, points, intensity=intensity, correction=False)
     else:
         # removing the point x from point_pattern
         points = np.delete(points, k, axis=0)
-    force_x = force_base(x, points, intensity=intensity, correction=correction)
+        force_x = force_base(x, points, intensity=intensity, correction=True)
     return force_x
 
 

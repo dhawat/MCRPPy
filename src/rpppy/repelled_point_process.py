@@ -63,7 +63,7 @@ class RepelledPointProcess:
                 x = x + epsilon_matrix * force_k(k=k, points=points, intensity=intensity, **kwargs)
         return x
 
-    def repelled_point_process(self, epsilon=None, p=None, stop_time=1, core_number=1, correction=True):
+    def repelled_point_process(self, epsilon=None, p=None, stop_time=1, core_number=1):
         points = self.point_pattern.points
         if epsilon is None:
             epsilon=epsilon_critical(self.dimension, self.point_pattern.intensity)
@@ -76,20 +76,20 @@ class RepelledPointProcess:
         if core_number>1:
             with Pool(processes=core_number) as pool:
                 new_points = pool.map(
-                partial(self._repelled_point, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree),
+                partial(self._repelled_point, epsilon=epsilon, stop_time=stop_time,  p=p, kd_tree=points_kd_tree),
                 list(range(points_nb)),
                 )
                 pool.close()
                 pool.join()
         else:
-            new_points = [self._repelled_point(k, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree) for k in range(points_nb)]
+            new_points = [self._repelled_point(k, epsilon=epsilon, stop_time=stop_time, p=p, kd_tree=points_kd_tree) for k in range(points_nb)]
         repelled_pp_list = sort_output_push_point(new_points, epsilon)
         return repelled_pp_list[0] if len(repelled_pp_list) == 1 else repelled_pp_list
 
-    def repelled_point_pattern(self, epsilon=None, stop_time=1, core_number=1, correction=True, p=None):
+    def repelled_point_pattern(self, epsilon=None, stop_time=1, core_number=1, p=None):
         intensity = self.point_pattern.intensity
         window = self.point_pattern.window
-        points = self.repelled_point_process(epsilon=epsilon, stop_time=stop_time, core_number=core_number, correction=correction, p=p)
+        points = self.repelled_point_process(epsilon=epsilon, stop_time=stop_time, core_number=core_number, p=p)
         repelled_point_pattern = [PointPattern(p, window, intensity=intensity) for p in points]
         return repelled_point_pattern
 
