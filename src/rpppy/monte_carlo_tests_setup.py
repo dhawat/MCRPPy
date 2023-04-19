@@ -1,27 +1,29 @@
-from rpppy.repelled_point_process import RepelledPointProcess
-from dppy.multivariate_jacobi_ope import MultivariateJacobiOPE
-from multiprocessing.pool import Pool
-from multiprocessing import freeze_support
 import math
-import statsmodels.api as sm
-from rpppy.numerical_integration import (monte_carlo_integration,
-                                        sobol_sequence,
-                                        sobol_point_pattern,
-                                        control_variate_integration,
-                                        estimate_control_variate_proposal,
-                                        estimate_control_variate_parameter,
-                                        delyon_portier_integration,
-                                       bandwidth_0_delyon_portier)
+import pickle
 import statistics as stat
-from scipy import stats
+import time
+from multiprocessing import freeze_support
+from multiprocessing.pool import Pool
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pickle
-import time
-import matplotlib.pyplot as plt
-from rpppy.spatial_windows import BallWindow, BoxWindow
-from rpppy.point_pattern import PointPattern
 import psutil
+import statsmodels.api as sm
+from dppy.multivariate_jacobi_ope import MultivariateJacobiOPE
+from scipy import stats
+
+from rpppy.monte_carlo_methods import (bandwidth_0_delyon_portier,
+                                         control_variate_mc,
+                                         delyon_portier_integration,
+                                         estimate_control_variate_parameter,
+                                         estimate_control_variate_proposal,
+                                         monte_carlo_method,
+                                         sobol_point_pattern, sobol_sequence)
+from rpppy.point_pattern import PointPattern
+from rpppy.repelled_point_process import RepelledPointProcess
+from rpppy.spatial_windows import BallWindow, BoxWindow
+from rpppy.point_processes import generate_scramble_sobol_sample
 
 
 def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names, exact_integrals=None, estimators=None, add_r_push=None,nb_point_cv=500, file_name=None, epsilon_push=None, nb_core=7,pool_dpp=True, **kwargs):
@@ -122,7 +124,7 @@ def mc_results(d, nb_point_list, support_window, nb_sample, fct_list, fct_names,
             #RQMC
             ## Scrambeled Sobol pp
             time_start4 = time.time()
-            sobol_points_list = [sobol_sequence(window=support_window, nb_points=nb_point_output)
+            sobol_points_list = [generate_scramble_sobol_sample(window=support_window, nb_points=nb_point_output)
                                 for _ in range(nb_sample)]
             sobol_pp = [PointPattern(p, window=support_window) for p in sobol_points_list]
             time_end = time.time() - time_start4
@@ -201,14 +203,14 @@ def mc_results_single_n( pp_list, type_mc, fct_list, fct_names,
         if type_mc=="MCCV":
             proposal, m_proposal = estimate_control_variate_proposal(points=points_cv_proposal, f=f)
             c = estimate_control_variate_parameter(points=points_cv_param_estimate, f=f, proposal=proposal)
-            mc_values=[control_variate_integration(points=p.points,
+            mc_values=[control_variate_mc(points=p.points,
                                                    f=f,
                                                    proposal=proposal,
                                                    mean_proposal= m_proposal,
                                                    c=c)
                       for p in pp_list]
         elif type_mc=="MCDPP":
-            mc_values = [monte_carlo_integration(points=p.points, f=f, weights=w)
+            mc_values = [monte_carlo_method(points=p.points, f=f, weights=w)
                          for (p,w) in zip(pp_list, weights)]
         elif type_mc in ["MCKS", "MCKSc"]:
             mc_values = [delyon_portier_integration(point_pattern=p,
@@ -221,7 +223,7 @@ def mc_results_single_n( pp_list, type_mc, fct_list, fct_names,
                                                    correction=correction)
                         for p in pp_list]
         elif type_mc in ["MC", "MCR", "MCP", "MCPS", "RQMC"]:
-            mc_values = [monte_carlo_integration(points=p.points, f=f) for p in pp_list]
+            mc_values = [monte_carlo_method(points=p.points, f=f) for p in pp_list]
         else:
             raise ValueError("Wrong MC type.")
         #print(mc_f_n["mc_results_f_{}".format(i)].keys(), type_mc)

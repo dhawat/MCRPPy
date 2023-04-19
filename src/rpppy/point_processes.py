@@ -12,6 +12,7 @@
 import numpy as np
 import scipy.linalg as la
 from scipy.spatial import KDTree
+import scipy as sp
 
 from rpppy.point_pattern import PointPattern
 from rpppy.spatial_windows import (
@@ -50,40 +51,6 @@ class HomogeneousPoissonPointProcess(object):
             float: Constant intensity.
         """
         return self._intensity
-
-    @staticmethod
-    def pair_correlation_function(r=None):
-        r"""Evaluate the pair correlation function :math:`g(r)=1` of the homogeneous Poisson process.
-
-        Args:
-            r (numpy.ndarray): Array of size :math:`n \times d`, where :math:`d` is the ambient dimension and :math:`n` the number of points where the pair correlation function is evaluated. Since the homogeneous Poisson process is isotropic, a vector of size :math:`n` corresponding to the norm of the :math:`n` points can also be passed. Defaults to None.
-
-        Returns:
-            float or numpy.ndarray: ``1.0`` if ``r=None``, otherwise a vector of size :math:`n` with entries equal to ``1.0``.
-        """
-        val = 1.0
-        if r is None:
-            return val
-
-        assert r.ndim <= 2
-        return np.full((r.shape[0], 1), val)
-
-    @staticmethod
-    def structure_factor(k=None):
-        r"""Evaluate the structure factor :math:`S(k)=1` of the homogeneous Poisson process.
-
-        Args:
-            k (numpy.ndarray): Array of size :math:`n \times d`, where :math:`d` is the ambient dimension and :math:`n` the number of points where the structure factor is evaluated. Since the homogeneous Poisson process is isotropic, a vector of size :math:`n` corresponding to the norm of the :math:`n` points can also be passed. Defaults to None.
-
-        Returns:
-            float or numpy.ndarray: ``1.0`` if ``k=None``, otherwise a vector of size :math:`n` with entries equal to ``1.0``.
-        """
-        val = 1.0
-        if k is None:
-            return val
-
-        assert k.ndim <= 2
-        return np.full(k.shape[0], val)
 
     def generate_sample(self, window, seed=None):
         r"""Generate an exact sample of the point process restricted to the :math:`d` dimensional `window`.
@@ -174,48 +141,6 @@ class ThomasPointProcess:
             float: Constant intensity.
         """
         return self._intensity
-
-    def pair_correlation_function(self, r_norm, d=2):
-        r"""Evaluate the pair correlation function of the Thomas point process.
-
-        .. math::
-
-            g(r)
-            = 1
-            + \kappa (4 \pi \sigma^2)^{d / 2} \exp(-\frac{1}{4\sigma^2} \|r\|^2)
-
-        Args:
-            r_norm (numpy.ndarray): Vector of size :math:`n` corresponding to the norm of the :math:`n` points where the pair correlation function is evaluated.
-
-            d (int, optional): Ambient dimension. Defaults to 2.
-
-        Returns:
-            numpy.ndarray: Vector of size :math:`n` containing the evaluation of the pair correlation function.
-        """
-        k = self.kappa
-        s2 = self.sigma ** 2
-
-        pcf = np.exp(r_norm ** 2 / (-4 * s2))
-        pcf /= k * (4 * np.pi * s2) ** (d / 2)
-        pcf += 1.0
-        return pcf
-
-    def structure_factor(self, k_norm):
-        r"""Evaluate the structure factor of the Thomas point process.
-
-        .. math::
-
-            S(k) = 1 + \mu \exp(- \sigma^2 * \|k\|^2).
-
-        Args:
-            k_norm (numpy.ndarray): Vector of size :math:`n` corresponding to the norm of the :math:`n` points where the structure factor is evaluated.
-
-        Returns:
-            numpy.ndarray: Vector of size :math:`n` containing the evaluation of the structure factor.
-        """
-        mu = self.mu
-        s2 = self.sigma ** 2
-        return 1.0 + mu * np.exp(-s2 * k_norm ** 2)
 
     def generate_sample(self, window, seed=None):
         r"""Generate an exact sample from the corresponding :py:class:`~structure_factor.thomas_process.ThomasPointProcess` restricted to the :math:`d` dimensional `window`.
@@ -426,6 +351,25 @@ class GinibrePointProcess(object):
         )
         return point_pattern
 
+
+def generate_scramble_sobol_point_pattern(window, nb_points, **kwargs):
+    """Generate scramble sobol point pattern in a centered box or ball window using ``https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html``.
+    """
+    d = window.dimension
+    if isinstance(window, BoxWindow):
+        l = np.max(np.diff(window.bounds))
+    elif isinstance(window, BallWindow):
+        l = 2*window.radius
+        nb_points = int(nb_points/window.volume*(l**d))
+    sobol = sp.stats.qmc.Sobol(d=d, scramble=True, **kwargs)
+    points_unit_box = sobol.random(n=nb_points)
+    points = (points_unit_box - 0.5)*l
+    point_pattern = PointPattern(points, window).restrict_to_window(window)
+    return point_pattern
+
+def generate_scramble_sobol_sample(window, nb_points, **kwargs):
+    point_pattern = generate_scramble_sobol_point_pattern(window, nb_points, **kwargs)
+    return point_pattern.points
 
 def mutual_nearest_neighbor_matching(X, Y, **KDTree_params):
     r"""Match the set of points ``X`` with a subset of points from ``Y`` based on mutual nearest neighbor matching :cite:`KlaLasYog20`. It is assumed that :math:`|X| \leq |Y|` and that each point in ``X``, resp. ``Y``, can have only one nearest neighbor in ``Y``, resp. ``X``.

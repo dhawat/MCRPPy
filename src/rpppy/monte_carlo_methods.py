@@ -1,29 +1,30 @@
-import numpy as np
-from rpppy.spatial_windows import UnitBallWindow, BoxWindow, BallWindow
-from rpppy.point_pattern import PointPattern
-import scipy as sp
 import statistics as stat
 import warnings
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.linear_model import LinearRegression
-import matplotlib.pyplot as plt
 
-def monte_carlo_integration(points, f, weights=None):
+import numpy as np
+import scipy as sp
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
+
+from rpppy.spatial_windows import UnitBallWindow
+from rpppy.plot_functions import _plot_proposal
+
+
+def monte_carlo_method(points, f, weights=None):
     if weights is None:
         points_nb = points.shape[0]
         weights = 1/points_nb
-    #print("In MC", f(points))
     return np.sum(f(points)*weights)
 
-def importance_sampling_integration(points, f, proposal):
-    points_nb = points.shape[0]
-    return np.sum(f(points)/proposal(points))/points_nb
+def importance_sampling_mc(points, f, proposal, weights=None):
+    h = lambda x: f(x)/proposal(x)
+    return monte_carlo_method(points, h, weights)
 
-def control_variate_integration(points, f, proposal, mean_proposal, c=None):
-    points_nb = points.shape[0]
+def control_variate_mc(points, f, proposal, mean_proposal, c=None, weights=None):
     if c is None:
         c= estimate_control_variate_parameter(points, f, proposal)
-    return np.sum(f(points) - c*(proposal(points) - mean_proposal))/points_nb
+    h = lambda x: f(x) - c*(proposal(x) - mean_proposal)
+    return monte_carlo_method(points, h, weights)
 
 #todo add test
 def estimate_control_variate_parameter(points, f, proposal):
@@ -49,18 +50,8 @@ def estimate_control_variate_proposal(points, f, poly_degree=2, plot=False):
     # the regressed model
     proposal = lambda x: model.predict(poly.fit_transform(x))
     print("coef", model.coef_)
-    if plot and points.shape[1]==2:
-        x = np.linspace(-1/2,1/2, 100)
-        X, Y = np.meshgrid(x, x)
-        z = np.array([X.ravel(), Y.ravel()]).T
-        fig = plt.figure(figsize=(14, 4))
-        ax = fig.add_subplot(2, 6, 1, projection='3d')
-        ax.scatter3D(X.ravel(), Y.ravel(), f(z), c=f(z))
-        ax.set_title(r"$f$")
-        ax = fig.add_subplot(2, 6, 2, projection='3d')
-        ax.scatter3D(X.ravel(), Y.ravel(), proposal(z), c=proposal(z))
-        ax.set_title("Control variate proposal")
-        plt.show()
+    if plot:
+        _plot_proposal(f, proposal, dim=points.shape[1])
     # mean of proposal for centered uniform law over the unit cube
     if poly_degree==2:
         d = points.shape[1]
@@ -95,32 +86,8 @@ def _find_sum_of_coef_of_cubic_term(poly, d):
 
     return (sum(poly(p) for p in eval_points) - 2*d*poly(np.zeros((1,d))))/2
 
-def sobol_sequence(window, nb_points, discrepancy=False, **kwargs):
-    #https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html
-    #! add warning window should be centered box window
-    #! add test
-    sobol_pp = sobol_point_pattern(window, nb_points, discrepancy, **kwargs)
-    return sobol_pp.points
 
-def sobol_point_pattern(window, nb_points, discrepancy=False, **kwargs):
-    d = window.dimension
-    if isinstance(window, BoxWindow):
-        l = np.max(np.diff(window.bounds))
-    elif isinstance(window, BallWindow):
-        l = 2*window.radius
-        nb_points = int(nb_points/window.volume*(l**d))
-    sobol = sp.stats.qmc.Sobol(d=d, **kwargs)
-    #m = int(np.log(N)/np.log(2))
-    #points_unit_box = sobol.random_base2(m=m)
-    points_unit_box = sobol.random(n=nb_points)
-    points = (points_unit_box - 0.5)*l
-    sobol_pp = PointPattern(points, window).restrict_to_window(window)
-    if discrepancy:
-        return sobol_pp, sp.stats.qmc.discrepancy(points_unit_box)
-    else:
-        return sobol_pp
-
-
+#! The following is not used for the moment
 def delyon_portier_integration(f, point_pattern, bandwidth=None, correction=False):
     points = point_pattern.points
     nb_points = points.shape[0]
@@ -156,12 +123,6 @@ def bandwidth_0_delyon_portier(points):
     numerator = d*2**(d+5)*sp.special.gamma(d/2 + 3)
     denominator = (2*d +1)*nb_points
     return np.sqrt(sigma_2)*(numerator/denominator)**(1/(4+d))
-
-def function_test_1_delyon_portier(x):
-    d = x.shape[1]
-    unit_box = BoxWindow([[0,1]]*d)
-    support = np.array([int(unit_box.indicator_function(p) == True) for p in x])
-    return np.prod(2*np.sin(np.pi*x)**2)*support
 
 def kernel(x, choice="DelPor"):
     d = x.shape[1]

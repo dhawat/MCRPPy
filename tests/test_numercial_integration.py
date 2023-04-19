@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from structure_factor.spatial_windows import UnitBallWindow, BoxWindow
 from structure_factor.point_pattern import PointPattern
-import rpppy.numerical_integration as ni
+import rpppy.monte_carlo_methods as ni
 import math
 
 
@@ -23,7 +23,7 @@ def f(x):
     )
 )
 def test_monte_carlo_integration(points, expected):
-    result = ni.monte_carlo_integration(f=f_1,points= points)
+    result = ni.monte_carlo_method(f=f_1,points= points)
     np.testing.assert_array_almost_equal(result, expected)
 
 @pytest.mark.parametrize(
