@@ -28,26 +28,39 @@ class RepelledPointProcess:
         return 1 / self.point_pattern.intensity
 
     def _repelled_point(self, k, epsilon, stop_time, p=None, **kwargs):
+        """Repellution of the point of index `k` of the point pattern using the force `force_k`.
+
+        Args:
+            k (_type_): _description_
+            epsilon (_type_): _description_
+            stop_time (_type_): _description_
+            p (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
         #! kdtree not none if p not none
         points = self.point_pattern.points.astype(float)
         window = self.point_pattern.window
+        intensity = self.point_pattern.intensity
         x = points[k]
         d = points.shape[1]
         if not isinstance (epsilon, list):
-            epsilon = [epsilon]
-        epsilon_matrix = [[epsilon[i]]*d for i in range(len(epsilon))]
+            epsilon_matrix = [[epsilon]*d]
+        else:
+            epsilon_matrix = [[epsilon[i]]*d for i in range(len(epsilon))]
         for _ in range(0, stop_time):
             #using trucated force
             if p is not None:
                 max_radius = subwindow_parameter_max(window, "BallWindow")
                 #don't consider points outside B(0, p/2)
                 if np.linalg.norm(x) + p < max_radius:
-                    x = x + epsilon_matrix * force_k(k=k, points=points, p=p, **kwargs)
+                    x = x + epsilon_matrix * force_k(k=k, points=points, intensity=intensity, p=p, **kwargs)
                 else:
                     x = np.atleast_2d(x)
             #using force with correction
             else:
-                x = x + epsilon_matrix * force_k(k=k, points=points, **kwargs)
+                x = x + epsilon_matrix * force_k(k=k, points=points, intensity=intensity, **kwargs)
         return x
 
     def repelled_point_process(self, epsilon=None, p=None, stop_time=1, core_number=1, correction=True):
@@ -70,13 +83,15 @@ class RepelledPointProcess:
                 pool.join()
         else:
             new_points = [self._repelled_point(k, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree) for k in range(points_nb)]
-        return sort_output_push_point(new_points, epsilon)
+        repelled_pp_list = sort_output_push_point(new_points, epsilon)
+        return repelled_pp_list[0] if len(repelled_pp_list) == 1 else repelled_pp_list
 
     def repelled_point_pattern(self, epsilon=None, stop_time=1, core_number=1, correction=True, p=None):
-        points = self.repelled_point_process(epsilon=epsilon, stop_time=stop_time, core_number=core_number, correction=correction, p=p)
+        intensity = self.point_pattern.intensity
         window = self.point_pattern.window
-        repelled_point_pattern = [PointPattern(p, window) for p in points]
-        return repelled_point_pattern[0] if len(repelled_point_pattern) == 1 else repelled_point_pattern
+        points = self.repelled_point_process(epsilon=epsilon, stop_time=stop_time, core_number=core_number, correction=correction, p=p)
+        repelled_point_pattern = [PointPattern(p, window, intensity=intensity) for p in points]
+        return repelled_point_pattern
 
 def epsilon_critical(d, intensity):
     return 1/(2*d*volume_unit_ball(d)*intensity)
