@@ -1,13 +1,13 @@
-from rpppy.point_pattern import PointPattern
+from mcrppy.point_pattern import PointPattern
 import numpy as np
 import copy
 #from numba import jit
 from multiprocessing import Pool, freeze_support, active_children
 from functools import partial
-from rpppy.coulomb_force import force_k
-from rpppy.utils import sort_output_push_point, _sort_point_pattern, volume_unit_ball
+from mcrppy.coulomb_force import force_k
+from mcrppy.utils import reshape_output_repelled_point, _sort_point_pattern, volume_unit_ball
 from scipy.spatial import KDTree
-from rpppy.spatial_windows import subwindow_parameter_max
+from mcrppy.spatial_windows import subwindow_parameter_max
 
 class RepelledPointProcess:
     def __init__(self, point_pattern):

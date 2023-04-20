@@ -1,12 +1,14 @@
 """Collection of point processes at related properties, e.g., intensity, pair correlation function, structure factor.
 
-- :py:class:`~structure_factor.point_processes.HomogeneousPoissonPointProcess`: The homogeneous Poisson point process.
+- :py:class:`~mcrppy.point_processes.HomogeneousPoissonPointProcess`: The homogeneous Poisson point process.
 
-- :py:class:`~structure_factor.point_processes.ThomasPointProcess`: The Thomas point process.
+- :py:class:`~mcrppy.point_processes.ThomasPointProcess`: The Thomas point process.
 
-- :py:class:`~structure_factor.point_processes.GinibrePointProcess`: The Ginibre point process.
+- :py:class:`~mcrppy.point_processes.GinibrePointProcess`: The Ginibre point process.
 
-- :py:func:`~structure_factor.point_processes.mutual_nearest_neighbor_matching`: The matching process of :cite:`KlaLasYog20`.
+- :py:func:`~mcrppy.point_processes.mutual_nearest_neighbor_matching`: The matching process of :cite:`KlaLasYog20`.
+
+Based on `https://github.com/For-a-few-DPPs-more/structure-factor/blob/main/src/structure_factor/point_processes.py`
 
 """
 import numpy as np
@@ -70,7 +72,7 @@ class HomogeneousPoissonPointProcess(object):
             points=points, window=window, intensity=self.intensity
         )
         return point_pattern
-    def generate_repelled_point_pattern(self, window, seed=None, add_boundary=None, **repelled_params):
+    def generate_repelled_point_pattern(self, window, seed=None, add_boundary=None, output=None, **repelled_params):
         warnings.warn("Method only available for centered ball or cubic window.")
         # simulation window
         simulation_window = _simulation_window_repelled_sample(window, add_boundary)
@@ -79,10 +81,13 @@ class HomogeneousPoissonPointProcess(object):
         # obtained repelled sample
         rpp = RepelledPointProcess(point_pattern_simulation)
         repelled_point_pattern_simulation = rpp.repelled_point_pattern(**repelled_params)
-        # samples in support window
-        point_pattern = point_pattern_simulation.restrict_to_window(window)
-        repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
-        return point_pattern, repelled_point_pattern
+        if output=="simulation":
+            return point_pattern_simulation, repelled_point_pattern_simulation
+        else:
+            # samples in support window
+            point_pattern = point_pattern_simulation.restrict_to_window(window)
+            repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
+            return point_pattern, repelled_point_pattern
 
 
 class ThomasPointProcess:
@@ -136,7 +141,7 @@ class ThomasPointProcess:
             points=points, window=window, intensity=self.intensity
         )
         return point_pattern
-    def generate_repelled_point_pattern(self, window, seed=None, add_boundary=None, **repelled_params):
+    def generate_repelled_point_pattern(self, window, seed=None, add_boundary=None, output=None, **repelled_params):
         warnings.warn("Method only available for centered ball or cubic window.")
         # simulation window
         simulation_window = _simulation_window_repelled_sample(window, add_boundary)
@@ -145,12 +150,16 @@ class ThomasPointProcess:
         # obtained repelled sample
         rpp = RepelledPointProcess(point_pattern_simulation)
         repelled_point_pattern_simulation = rpp.repelled_point_pattern(**repelled_params)
-        # samples in support window
-        point_pattern = point_pattern_simulation.restrict_to_window(window)
-        repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
-        return point_pattern, repelled_point_pattern
+        if output=="simulation":
+            return point_pattern_simulation, repelled_point_pattern_simulation
+        else:
+            # samples in support window
+            point_pattern = point_pattern_simulation.restrict_to_window(window)
+            repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
+            return point_pattern, repelled_point_pattern
 
 
+#! not convinced with the number of points in ginibre it seems if we set the number the points its not what we get
 class GinibrePointProcess(object):
     """Ginibre point process corresponds to the complex eigenvalues of a standard complex Gaussian matrix.
 
@@ -179,7 +188,7 @@ class GinibrePointProcess(object):
     def structure_factor(k_norm):
         return 1.0 - np.exp(-0.25 * (k_norm ** 2))
 
-    def generate_sample(self, window, n=None, seed=None):
+    def generate_sample(self, window, nb_points=None, seed=None):
         if not isinstance(window, BallWindow):
             raise ValueError("The window should be a 2-d centered BallWindow.")
         if window.dimension != 2:
@@ -187,15 +196,14 @@ class GinibrePointProcess(object):
         if not np.all(np.equal(window.center, 0.0)):
             raise ValueError("The window should be a centered window.")
 
-        if n is None:
-            n = int(window.volume * self.intensity)
-        assert isinstance(n, int)
-
+        if nb_points is None:
+            nb_points = int(window.volume * self.intensity)
+        assert isinstance(nb_points, int)
         rng = get_random_number_generator(seed)
 
-        A = np.zeros((n, n), dtype=complex)
-        A.real = rng.standard_normal((n, n))
-        A.imag = rng.standard_normal((n, n))
+        A = np.zeros((nb_points, nb_points), dtype=complex)
+        A.real = rng.standard_normal((nb_points, nb_points))
+        A.imag = rng.standard_normal((nb_points, nb_points))
         eigvals = la.eigvals(A) / np.sqrt(2.0)
 
         points = np.vstack((eigvals.real, eigvals.imag)).T
@@ -203,7 +211,7 @@ class GinibrePointProcess(object):
 
         return points[mask]
 
-    def generate_point_pattern(self, window, n=None, seed=None):
+    def generate_point_pattern(self, window, nb_points=None, seed=None):
         r"""Generate a :math:`2`-dimensional :py:class:`~structure_factor.point_pattern.PointPattern` of the point process, with a centered :py:class:`~structure_factor.spatial_windows.BallWindow`.
 
         Args:
@@ -228,25 +236,28 @@ class GinibrePointProcess(object):
             - :py:class:`~structure_factor.spatial_windows.BallWindow`
             - :py:class:`~structure_factor.point_pattern.PointPattern`
         """
-        points = self.generate_sample(window=window, n=n, seed=seed)
+        points = self.generate_sample(window=window, nb_points=nb_points, seed=seed)
         point_pattern = PointPattern(
             points=points, window=window, intensity=self.intensity
         )
         return point_pattern
 
-    def generate_repelled_point_pattern(self, window, seed=None, add_boundary=None, **repelled_params):
+    def generate_repelled_point_pattern(self, window, nb_points=None, seed=None, add_boundary=None, output=None, **repelled_params):
         warnings.warn("Method only available for centered ball or cubic window.")
         # simulation window
         simulation_window = _simulation_window_repelled_sample(window, add_boundary)
         # simulation sample
-        point_pattern_simulation = self.generate_point_pattern(simulation_window, seed)
+        point_pattern_simulation = self.generate_point_pattern(simulation_window, nb_points=nb_points, seed=seed)
         # obtained repelled sample
         rpp = RepelledPointProcess(point_pattern_simulation)
         repelled_point_pattern_simulation = rpp.repelled_point_pattern(**repelled_params)
-        # samples in support window
-        point_pattern = point_pattern_simulation.restrict_to_window(window)
-        repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
-        return point_pattern, repelled_point_pattern
+        if output=="simulation":
+            return point_pattern_simulation, repelled_point_pattern_simulation
+        else:
+            # samples in support window
+            point_pattern = point_pattern_simulation.restrict_to_window(window)
+            repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
+            return point_pattern, repelled_point_pattern
 class ScrambleSobolPointProcess(object):
 
     def generate_point_pattern(self, nb_points, window, seed=None, **kwargs):
@@ -254,35 +265,39 @@ class ScrambleSobolPointProcess(object):
         """
         #! TBC to get the needed number of points in both cases
         if isinstance(window, BallWindow):
-            warnings.warn("The obtained number of points is less than `nb_points`. The points are sampled in a BoxWindow of lenghtside equal the diameter of the window then a restriction is made to get the points in the support window.")
+            warnings.warn("The obtained number of points is not `nb_points`. The points are sampled in a BoxWindow of lenghtside equal the diameter of the window then a restriction is made to get the points in the support window.")
         rng = get_random_number_generator(seed)
         d = window.dimension
         sobol = sp.stats.qmc.Sobol(d=d, scramble=True, seed=rng, **kwargs)
+        l, nb_points = _simulation_param_sobol_sequence(window=window, nb_points=nb_points)
+        simulation_window = BoxWindow(bounds=[[-l/2, l/2]]*d)
         points_unit_box = sobol.random(n=nb_points)
-        l = _simulation_window_param_sobol_sequence(window)
         points = (points_unit_box - 0.5)*l
-        point_pattern = PointPattern(points, window).restrict_to_window(window)
+        point_pattern = PointPattern(points, simulation_window).restrict_to_window(window)
         return point_pattern
 
     def generate_sample(self, nb_points, window, seed=None, **kwargs):
         point_pattern = self.generate_scramble_sobol_point_pattern(window, nb_points, seed=seed, **kwargs)
         return point_pattern.points
 
-    def generate_repelled_point_pattern(self, nb_points, window, seed=None, add_boundary=None, **repelled_params):
+    def generate_repelled_point_pattern(self, nb_points, window, seed=None, add_boundary=None, output=None, **repelled_params):
         warnings.warn("Method only available for centered ball or box window.")
         # simulation window
         simulation_window = _simulation_window_repelled_sample(window, add_boundary)
         # simulation nb_points
-        nb_points_simulation = (nb_points*simulation_window.volum)/window.volume
+        nb_points_simulation = int((nb_points*simulation_window.volume)/window.volume)
         # simulation sample
         point_pattern_simulation = self.generate_point_pattern(nb_points_simulation, simulation_window, seed)
         # obtained repelled sample
         rpp = RepelledPointProcess(point_pattern_simulation)
         repelled_point_pattern_simulation = rpp.repelled_point_pattern(**repelled_params)
-        # samples in support window
-        point_pattern = point_pattern_simulation.restrict_to_window(window)
-        repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
-        return point_pattern, repelled_point_pattern
+        if output=="simulation":
+            return point_pattern_simulation, repelled_point_pattern_simulation
+        else:
+            # samples in support window
+            point_pattern = point_pattern_simulation.restrict_to_window(window)
+            repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
+            return point_pattern, repelled_point_pattern
 
 class BinomialPointProcess(object):
     def generate_sample(self, nb_points, window, seed=None):
@@ -297,21 +312,24 @@ class BinomialPointProcess(object):
             points=points, window=window
         )
         return point_pattern
-    def generate_repelled_point_pattern(self, nb_points, window, seed=None, add_boundary=None, **repelled_params):
+    def generate_repelled_point_pattern(self, nb_points, window, seed=None, add_boundary=None, output=None, **repelled_params):
         warnings.warn("Method only available for centered ball or box window.")
         # simulation window
         simulation_window = _simulation_window_repelled_sample(window, add_boundary)
         # simulation nb_points
-        nb_points_simulation = (nb_points*simulation_window.volum)/window.volume
+        nb_points_simulation = int((nb_points*simulation_window.volume)/window.volume)
         # simulation sample
         point_pattern_simulation = self.generate_point_pattern(nb_points_simulation, simulation_window, seed)
         # obtained repelled sample
         rpp = RepelledPointProcess(point_pattern_simulation)
         repelled_point_pattern_simulation = rpp.repelled_point_pattern(**repelled_params)
-        # samples in support window
-        point_pattern = point_pattern_simulation.restrict_to_window(window)
-        repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
-        return point_pattern, repelled_point_pattern
+        if output=="simulation":
+            return point_pattern_simulation, repelled_point_pattern_simulation
+        else:
+            # samples in support window
+            point_pattern = point_pattern_simulation.restrict_to_window(window)
+            repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
+            return point_pattern, repelled_point_pattern
 
 def _simulation_window_repelled_sample(window, add_boundary=None):
     """Repelled point process should be always sampled in a ball window containing the support window `window`. To reduce boundary effect `add_boundary` can be used to add additional factor to the radius of the simulation window.
@@ -334,14 +352,14 @@ def _simulation_window_repelled_sample(window, add_boundary=None):
     window = BallWindow(center=[0]*d, radius=r)
     return window
 
-def _simulation_window_param_sobol_sequence(window):
+def _simulation_param_sobol_sequence(window, nb_points):
     d = window.dimension
     if isinstance(window, BoxWindow):
         l = np.max(np.diff(window.bounds))
     elif isinstance(window, BallWindow):
         l = 2*window.radius
         nb_points = int(nb_points/window.volume*(l**d))
-    return l
+    return l, nb_points
 
 def mutual_nearest_neighbor_matching(X, Y, **KDTree_params):
     r"""Match the set of points ``X`` with a subset of points from ``Y`` based on mutual nearest neighbor matching :cite:`KlaLasYog20`. It is assumed that :math:`|X| \leq |Y|` and that each point in ``X``, resp. ``Y``, can have only one nearest neighbor in ``Y``, resp. ``X``.

@@ -1,4 +1,4 @@
-from rpppy.spatial_windows import BallWindow, BoxWindow
+from mcrppy.spatial_windows import BallWindow, BoxWindow
 import math
 import numpy as np
 

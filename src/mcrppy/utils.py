@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import stats
-from rpppy.spatial_windows import UnitBallWindow, BoxWindow
+from mcrppy.spatial_windows import UnitBallWindow, BoxWindow
 
 def sort_points_by_increasing_distance(points):
     norm_points = np.linalg.norm(points, axis=1)
@@ -11,14 +11,15 @@ def volume_unit_ball(d):
     center = np.full(shape=(d), fill_value=0)
     return UnitBallWindow(center=center).volume
 
-def sort_output_push_point(x, epsilon):
-    x_list = []
+def reshape_output_repelled_point(x, epsilon):
     if not isinstance (epsilon, list):
-            epsilon = [epsilon]
-    for e in range(len(epsilon)):
-        x_e = np.vstack([x[i][e] for i in range(len(x))])
-        x_list.append(x_e)
-    return x_list
+            x_reshaped = np.vstack(x)
+    else :
+        x_reshaped = []
+        for e in range(len(epsilon)):
+            x_e = np.vstack([x[i][e] for i in range(len(x))])
+            x_reshaped.append(x_e)
+    return x_reshaped
 
 def _sort_point_pattern(point_pattern):
     point_pattern.points = sort_points_by_increasing_distance(point_pattern.points)
@@ -34,15 +35,6 @@ def jaccobi_measure(x, jac_params):
     result = np.prod(a, axis=1)
     support = support_window.indicator_function(x)*1
     return result*support
-# def test_jaccobi_measure():
-#     x = np.array([[1, 1/2, 0], [1/2, 0, 0], [0, 1.1, 0]])
-#     #x= np.array([ [1/2, 0, 0]])
-#     jac_params = np.array([[1, 1, 0], [2, 0, 1]]).T
-#     expected = np.array([0, 9/8, 0])
-#     if np.isclose(jaccobi_measure(x, jac_params), expected, atol=1e-9).all():
-#         print("test succeeded")
-#     else:
-#         print("test failed, error=", jaccobi_measure(x,jac_params)- expected)
 
 # utils for monte_carlo_methods
 def _find_sum_of_coef_of_cubic_term(poly, d):

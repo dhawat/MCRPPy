@@ -6,7 +6,7 @@ import copy
 from multiprocessing import Pool, freeze_support
 from functools import partial
 from mcrppy.coulomb_force import force_k
-from mcrppy.utils import sort_output_push_point, _sort_point_pattern, volume_unit_ball
+from mcrppy.utils import reshape_output_repelled_point, _sort_point_pattern, volume_unit_ball
 from scipy.spatial import KDTree
 from mcrppy.spatial_windows import subwindow_parameter_max
 
@@ -88,7 +88,7 @@ class GravityPointProcess:
             #pool.close()
         else:
             new_points = [self._pushed_point(k, epsilon=epsilon, stop_time=stop_time, correction=correction, p=p, kd_tree=points_kd_tree, q=q) for k in range(points_nb)]
-        return sort_output_push_point(new_points, epsilon)
+        return reshape_output_repelled_point(new_points, epsilon)
 
     def pushed_point_pattern(self, epsilon=None, stop_time=1, core_number=7, correction=True, p=None, multiprocess=True, q=0):
         points = self.pushed_point_process(epsilon=epsilon, stop_time=stop_time, core_number=core_number, correction=correction, p=p, multiprocess=multiprocess, q=q)

@@ -2,10 +2,10 @@ import numpy as np
 from multiprocessing import Pool, freeze_support
 from functools import partial
 from scipy.spatial import KDTree
-from rpppy.coulomb_force import force_k
-from rpppy.point_pattern import PointPattern
-from rpppy.utils import sort_output_push_point, _sort_point_pattern, volume_unit_ball
-from rpppy.spatial_windows import subwindow_parameter_max
+from mcrppy.coulomb_force import force_k
+from mcrppy.point_pattern import PointPattern
+from mcrppy.utils import reshape_output_repelled_point, _sort_point_pattern, volume_unit_ball
+from mcrppy.spatial_windows import subwindow_parameter_max
 
 class RepelledPointProcess:
     def __init__(self, point_pattern):
@@ -15,7 +15,7 @@ class RepelledPointProcess:
             point_pattern (:py:class:`~rpppy.point_pattern.PointPattern`): Object of type point pattern which contains a realization ``point_pattern.points`` of a point process, the window where the points were simulated ``point_pattern.window`` and (optionally) the intensity of the point process ``point_pattern.intensity``.
         """
         assert isinstance(point_pattern, PointPattern)
-        self.point_pattern = _sort_point_pattern(point_pattern)
+        self.point_pattern = point_pattern
 
     @property
     def dimension(self):
@@ -63,7 +63,7 @@ class RepelledPointProcess:
                 x = x + epsilon_matrix * force_k(k=k, points=points, intensity=intensity, **kwargs)
         return x
 
-    def repelled_point_process(self, epsilon=None, p=None, stop_time=1, core_number=1):
+    def repelled_point_process(self, epsilon=None, p=None, stop_time=1, nb_cores=1):
         points = self.point_pattern.points
         if epsilon is None:
             epsilon=epsilon_critical(self.dimension, self.point_pattern.intensity)
@@ -72,25 +72,28 @@ class RepelledPointProcess:
         else:
             points_kd_tree=None
         points_nb = points.shape[0]
-        freeze_support()
-        if core_number>1:
-            with Pool(processes=core_number) as pool:
+        if nb_cores>1:
+            freeze_support()
+            with Pool(processes=nb_cores) as pool:
                 new_points = pool.map(
-                partial(self._repelled_point, epsilon=epsilon, stop_time=stop_time,  p=p, kd_tree=points_kd_tree),
+                partial(self._repelled_point, epsilon=epsilon, stop_time=stop_time, p=p, kd_tree=points_kd_tree),
                 list(range(points_nb)),
                 )
                 pool.close()
                 pool.join()
         else:
             new_points = [self._repelled_point(k, epsilon=epsilon, stop_time=stop_time, p=p, kd_tree=points_kd_tree) for k in range(points_nb)]
-        repelled_pp_list = sort_output_push_point(new_points, epsilon)
-        return repelled_pp_list[0] if len(repelled_pp_list) == 1 else repelled_pp_list
+        repelled_pp_list = reshape_output_repelled_point(new_points, epsilon)
+        return repelled_pp_list
 
-    def repelled_point_pattern(self, epsilon=None, stop_time=1, core_number=1, p=None):
+    def repelled_point_pattern(self, epsilon=None, stop_time=1, nb_cores=1, p=None):
         intensity = self.point_pattern.intensity
         window = self.point_pattern.window
-        points = self.repelled_point_process(epsilon=epsilon, stop_time=stop_time, core_number=core_number, p=p)
-        repelled_point_pattern = [PointPattern(p, window, intensity=intensity) for p in points]
+        points = self.repelled_point_process(epsilon=epsilon, stop_time=stop_time, nb_cores=nb_cores, p=p)
+        if isinstance(points, list):
+            repelled_point_pattern = [PointPattern(p, window, intensity=intensity) for p in points]
+        else :
+            repelled_point_pattern = PointPattern(points, window, intensity=intensity)
         return repelled_point_pattern
 
 def epsilon_critical(d, intensity):

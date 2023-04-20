@@ -15,7 +15,7 @@ from scipy import stats
 
 from mcrppy.monte_carlo_methods import (bandwidth_0_delyon_portier,
                                        control_variate_mc,
-                                       delyon_portier_integration,
+                                       delyon_portier_mc,
                                        estimate_control_variate_parameter,
                                        estimate_control_variate_proposal,
                                        monte_carlo_method, sobol_point_pattern,
@@ -233,12 +233,12 @@ def mc_results_n( pp_list, type_mc, fct_list,
             mc_values = [monte_carlo_method(points=p.points, f=f, weights=w)
                          for (p,w) in zip(pp_list, weights)]
         elif type_mc in ["MCKS", "MCKSc"]:
-            mc_values = [delyon_portier_integration(point_pattern=p,
+            mc_values = [delyon_portier_mc(point_pattern=p,
                                                     f=f,
                                                    correction=correction)
                         for p in pp_list]
         elif type_mc in ["MCKS_h0", "MCKSc_h0"]:
-            mc_values = [delyon_portier_integration(point_pattern=p, f=f,
+            mc_values = [delyon_portier_mc(point_pattern=p, f=f,
                                                     bandwidth=bandwidth_0_delyon_portier(p.points),
                                                    correction=correction)
                         for p in pp_list]

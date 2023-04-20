@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from rpppy.utils import regression_line
+from mcrppy.utils import regression_line
 import statsmodels.api as sm
 
 def _plot_proposal(f, proposal, dim=2):
