@@ -1,7 +1,7 @@
 import pytest
-from rpppy.repelled_point_process import RepelledPointProcess, epsilon_critical
-from rpppy.point_pattern import PointPattern
-from rpppy.spatial_windows import BallWindow
+from mcrppy.repelled_point_process import RepelledPointProcess, epsilon_critical
+from mcrppy.point_pattern import PointPattern
+from mcrppy.spatial_windows import BallWindow
 import numpy as np
 
 # test _repelled_point without p

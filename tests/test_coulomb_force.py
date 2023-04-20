@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
-from rpppy.coulomb_force import force_base, force_k, _select_point_in_ball
+from mcrppy.coulomb_force import force_base, force_k, _select_point_in_ball
 from scipy.spatial import KDTree
-from rpppy.utils import volume_unit_ball
+from mcrppy.utils import volume_unit_ball
 
 @pytest.mark.parametrize(
     "n, d, intensity, x, test",

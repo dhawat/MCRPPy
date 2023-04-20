@@ -1,5 +1,5 @@
 import numpy as np
-from rpppy.utils import volume_unit_ball
+from mcrppy.utils import volume_unit_ball
 
 def force_base(x, points, intensity=None, correction=True):
     r"""

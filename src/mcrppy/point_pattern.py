@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from rpppy.spatial_windows import AbstractSpatialWindow
+from mcrppy.spatial_windows import AbstractSpatialWindow
 
 
 class PointPattern(object):

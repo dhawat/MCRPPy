@@ -13,13 +13,16 @@ import numpy as np
 import scipy.linalg as la
 from scipy.spatial import KDTree
 import scipy as sp
+import math
+import warnings
 
-from rpppy.point_pattern import PointPattern
-from rpppy.spatial_windows import (
+from mcrppy.point_pattern import PointPattern
+from mcrppy.spatial_windows import (
     AbstractSpatialWindow,
     BallWindow,
     BoxWindow,
 )
+from mcrppy.repelled_point_process import RepelledPointProcess
 
 def get_random_number_generator(seed=None):
     """Turn seed into a np.random.Generator instance."""
@@ -53,25 +56,6 @@ class HomogeneousPoissonPointProcess(object):
         return self._intensity
 
     def generate_sample(self, window, seed=None):
-        r"""Generate an exact sample of the point process restricted to the :math:`d` dimensional `window`.
-
-        Args:
-            window (:py:class:`~structure_factor.spatial_windows.AbstractSpatialWindow`): :math:`d`-dimensional observation window where the points will be generated.
-
-        Returns:
-            numpy.ndarray: Array of size :math:`n \times d`, where :math:`n` is the number of points forming the sample.
-
-        Example:
-            .. plot:: code/point_processes/poisson_sample.py
-                :include-source: True
-                :caption:
-                :alt: code/point_processes/poisson_sample.py
-                :align: center
-
-        .. seealso::
-
-            - :py:mod:`~structure_factor.spatial_windows`
-        """
         if not isinstance(window, AbstractSpatialWindow):
             raise TypeError("window argument must be an AbstractSpatialWindow")
 
@@ -81,32 +65,24 @@ class HomogeneousPoissonPointProcess(object):
         return window.rand(nb_points, seed=rng)
 
     def generate_point_pattern(self, window, seed=None):
-        """Generate a :py:class:`~structure_factor.point_pattern.PointPattern` of the point process.
-
-        Args:
-            window (:py:class:`~structure_factor.spatial_windows.AbstractSpatialWindow`): Observation window.
-            seed (int, optional): Seed to initialize the points generator. Defaults to None.
-
-        Returns:
-            :py:class:`~structure_factor.point_pattern.PointPattern`:Object of type :py:class:`~structure_factor.point_pattern.PointPattern` containing a realization of the point process, the observation window, and (optionally) the intensity of the point process (see :py:class:`~structure_factor.point_pattern.PointPattern`).
-
-        Example:
-            .. plot:: code/point_processes/poisson_pp.py
-                :include-source: True
-                :caption:
-                :alt: code/point_processes/poisson_pp.py
-                :align: center
-
-        .. seealso::
-
-            - :py:mod:`~structure_factor.spatial_windows`
-            - :py:class:`~structure_factor.point_pattern.PointPattern`
-        """
         points = self.generate_sample(window=window, seed=seed)
         point_pattern = PointPattern(
             points=points, window=window, intensity=self.intensity
         )
         return point_pattern
+    def generate_repelled_point_pattern(self, window, seed=None, add_boundary=None, **repelled_params):
+        warnings.warn("Method only available for centered ball or cubic window.")
+        # simulation window
+        simulation_window = _simulation_window_repelled_sample(window, add_boundary)
+        # simulation sample
+        point_pattern_simulation = self.generate_point_pattern(simulation_window, seed)
+        # obtained repelled sample
+        rpp = RepelledPointProcess(point_pattern_simulation)
+        repelled_point_pattern_simulation = rpp.repelled_point_pattern(**repelled_params)
+        # samples in support window
+        point_pattern = point_pattern_simulation.restrict_to_window(window)
+        repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
+        return point_pattern, repelled_point_pattern
 
 
 class ThomasPointProcess:
@@ -118,15 +94,6 @@ class ThomasPointProcess:
     """
 
     def __init__(self, kappa, mu, sigma):
-        """Create a homogeneous Thomas point process.
-
-        Args:
-            kappa (float): Mean number of clusters per unit volume. Intensity of the parent Poisson point process.
-
-            mu (float): Mean number of points per clusters. Mean of the child Gaussian distribution.
-
-            sigma (float): Standard deviation of the child Gaussian distribution.
-        """
         self.kappa = kappa
         self.mu = mu
         self.sigma = sigma
@@ -135,33 +102,9 @@ class ThomasPointProcess:
 
     @property
     def intensity(self):
-        r"""Return the intensity :math:`\rho_1(r) = \kappa \mu` of the Thomas point process.
-
-        Returns:
-            float: Constant intensity.
-        """
         return self._intensity
 
     def generate_sample(self, window, seed=None):
-        r"""Generate an exact sample from the corresponding :py:class:`~structure_factor.thomas_process.ThomasPointProcess` restricted to the :math:`d` dimensional `window`.
-
-        Args:
-            window (:py:class:`~structure_factor.spatial_windows.AbstractSpatialWindow`): :math:`d`-dimensional observation window where the points will be generated.
-
-        Returns:
-            numpy.ndarray: Array of size :math:`n \times d`, where :math:`n` is the number of points forming the sample.
-
-        Example:
-            .. plot:: code/point_processes/thomas_sample.py
-                :include-source: True
-                :caption:
-                :alt: code/point_processes/thomas_sample.py
-                :align: center
-
-        .. seealso::
-
-            - :py:mod:`~structure_factor.spatial_windows`
-        """
         if not isinstance(window, AbstractSpatialWindow):
             raise TypeError("window argument must be an AbstractSpatialWindow")
 
@@ -188,33 +131,24 @@ class ThomasPointProcess:
         return points[mask]
 
     def generate_point_pattern(self, window, seed=None):
-        """Generate a :py:class:`~structure_factor.point_pattern.PointPattern` of the point process.
-
-        Args:
-            window (:py:class:`~structure_factor.spatial_windows.AbstractSpatialWindow`): Observation window.
-
-            seed (int, optional): Seed to initialize the points generator. Defaults to None.
-
-        Returns:
-            :py:class:`~structure_factor.point_pattern.PointPattern`:Object of type :py:class:`~structure_factor.point_pattern.PointPattern` containing a realization of the point process, the observation window, and (optionally) the intensity of the point process (see :py:class:`~structure_factor.point_pattern.PointPattern`).
-
-        Example:
-            .. plot:: code/point_processes/thomas_pp.py
-                :include-source: True
-                :caption:
-                :alt: code/point_processes/thomas_pp.py
-                :align: center
-
-        .. seealso::
-
-            - :py:mod:`~structure_factor.spatial_windows`
-            - :py:class:`~structure_factor.point_pattern.PointPattern`
-        """
         points = self.generate_sample(window=window, seed=seed)
         point_pattern = PointPattern(
             points=points, window=window, intensity=self.intensity
         )
         return point_pattern
+    def generate_repelled_point_pattern(self, window, seed=None, add_boundary=None, **repelled_params):
+        warnings.warn("Method only available for centered ball or cubic window.")
+        # simulation window
+        simulation_window = _simulation_window_repelled_sample(window, add_boundary)
+        # simulation sample
+        point_pattern_simulation = self.generate_point_pattern(simulation_window, seed)
+        # obtained repelled sample
+        rpp = RepelledPointProcess(point_pattern_simulation)
+        repelled_point_pattern_simulation = rpp.repelled_point_pattern(**repelled_params)
+        # samples in support window
+        point_pattern = point_pattern_simulation.restrict_to_window(window)
+        repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
+        return point_pattern, repelled_point_pattern
 
 
 class GinibrePointProcess(object):
@@ -239,64 +173,13 @@ class GinibrePointProcess(object):
 
     @staticmethod
     def pair_correlation_function(r_norm):
-        r"""Evaluate the pair correlation function of the Ginibre point process.
-
-        .. math::
-
-            g(r) = 1 - \exp(- \|r\|^2)
-
-        Args:
-            r_norm (numpy.ndarray): Vector of size :math:`n` corresponding to the norm of the :math:`n` points where the pair correlation function is evaluated.
-
-        Returns:
-            numpy.ndarray: Vector of size :math:`n` containing the evaluation of the pair correlation function.
-        """
         return 1.0 - np.exp(-(r_norm ** 2))
 
     @staticmethod
     def structure_factor(k_norm):
-        r"""Evaluate the structure factor of the Ginibre point process.
-
-        .. math::
-
-            S(k) = 1 - \exp(- \frac{1}{4} \|k\|^2).
-
-        Args:
-            k_norm (numpy.ndarray): Vector of size :math:`n` corresponding to the norm of the :math:`n` points where the structure factor is evaluated.
-
-        Returns:
-            numpy.ndarray: Vector of size :math:`n` containing the evaluation of the structure factor.
-        """
         return 1.0 - np.exp(-0.25 * (k_norm ** 2))
 
     def generate_sample(self, window, n=None, seed=None):
-        r"""Generate a sample of the Ginibre point process made of ``n`` points, inside the observation ``window``.
-
-        This is done by computing the eigenvalues of a random matrix :math:`G` of size :math:`n \times n`, filled with i.i.d. standard complex Gaussian variables, i.e.,
-
-        .. math::
-
-            G_{ij} = \frac{1}{\sqrt{2}} (X_{ij} + \mathbf{i} Y_{ij}).
-
-        Args:
-            window (:py:class:`~structure_factor.spatial_windows.BallWindow`): :math:`2`-dimensional centered ball window where the points will be generated.
-
-            n (int, optional): Number of points of the output sample. If ``n`` is None (default), it is set to the integer part of :math:`\rho |W| = \frac{1}{\pi} |W|`. Defaults to None.
-
-        Returns:
-            numpy.ndarray: Array of size :math:`n \times 2`, representing the :math:`n` points forming the sample.
-
-        Example:
-            .. plot:: code/point_processes/ginibre_sample.py
-                :include-source: True
-                :caption:
-                :alt: code/point_processes/ginibre_sample.py
-                :align: center
-
-        .. seealso::
-
-            - :py:class:`~structure_factor.spatial_windows.BallWindow`
-        """
         if not isinstance(window, BallWindow):
             raise ValueError("The window should be a 2-d centered BallWindow.")
         if window.dimension != 2:
@@ -351,25 +234,114 @@ class GinibrePointProcess(object):
         )
         return point_pattern
 
+    def generate_repelled_point_pattern(self, window, seed=None, add_boundary=None, **repelled_params):
+        warnings.warn("Method only available for centered ball or cubic window.")
+        # simulation window
+        simulation_window = _simulation_window_repelled_sample(window, add_boundary)
+        # simulation sample
+        point_pattern_simulation = self.generate_point_pattern(simulation_window, seed)
+        # obtained repelled sample
+        rpp = RepelledPointProcess(point_pattern_simulation)
+        repelled_point_pattern_simulation = rpp.repelled_point_pattern(**repelled_params)
+        # samples in support window
+        point_pattern = point_pattern_simulation.restrict_to_window(window)
+        repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
+        return point_pattern, repelled_point_pattern
+class ScrambleSobolPointProcess(object):
 
-def generate_scramble_sobol_point_pattern(window, nb_points, **kwargs):
-    """Generate scramble sobol point pattern in a centered box or ball window using ``https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html``.
+    def generate_point_pattern(self, nb_points, window, seed=None, **kwargs):
+        """Generate scramble sobol point pattern in a centered box or ball window using ``https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html``.
+        """
+        #! TBC to get the needed number of points in both cases
+        if isinstance(window, BallWindow):
+            warnings.warn("The obtained number of points is less than `nb_points`. The points are sampled in a BoxWindow of lenghtside equal the diameter of the window then a restriction is made to get the points in the support window.")
+        rng = get_random_number_generator(seed)
+        d = window.dimension
+        sobol = sp.stats.qmc.Sobol(d=d, scramble=True, seed=rng, **kwargs)
+        points_unit_box = sobol.random(n=nb_points)
+        l = _simulation_window_param_sobol_sequence(window)
+        points = (points_unit_box - 0.5)*l
+        point_pattern = PointPattern(points, window).restrict_to_window(window)
+        return point_pattern
+
+    def generate_sample(self, nb_points, window, seed=None, **kwargs):
+        point_pattern = self.generate_scramble_sobol_point_pattern(window, nb_points, seed=seed, **kwargs)
+        return point_pattern.points
+
+    def generate_repelled_point_pattern(self, nb_points, window, seed=None, add_boundary=None, **repelled_params):
+        warnings.warn("Method only available for centered ball or box window.")
+        # simulation window
+        simulation_window = _simulation_window_repelled_sample(window, add_boundary)
+        # simulation nb_points
+        nb_points_simulation = (nb_points*simulation_window.volum)/window.volume
+        # simulation sample
+        point_pattern_simulation = self.generate_point_pattern(nb_points_simulation, simulation_window, seed)
+        # obtained repelled sample
+        rpp = RepelledPointProcess(point_pattern_simulation)
+        repelled_point_pattern_simulation = rpp.repelled_point_pattern(**repelled_params)
+        # samples in support window
+        point_pattern = point_pattern_simulation.restrict_to_window(window)
+        repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
+        return point_pattern, repelled_point_pattern
+
+class BinomialPointProcess(object):
+    def generate_sample(self, nb_points, window, seed=None):
+        if not isinstance(window, AbstractSpatialWindow):
+            raise TypeError("window argument must be an AbstractSpatialWindow")
+
+        rng = get_random_number_generator(seed)
+        return window.rand(nb_points, seed=rng)
+    def generate_point_pattern(self, nb_points, window, seed=None):
+        points = self.generate_sample(nb_points=nb_points, window=window, seed=seed)
+        point_pattern = PointPattern(
+            points=points, window=window
+        )
+        return point_pattern
+    def generate_repelled_point_pattern(self, nb_points, window, seed=None, add_boundary=None, **repelled_params):
+        warnings.warn("Method only available for centered ball or box window.")
+        # simulation window
+        simulation_window = _simulation_window_repelled_sample(window, add_boundary)
+        # simulation nb_points
+        nb_points_simulation = (nb_points*simulation_window.volum)/window.volume
+        # simulation sample
+        point_pattern_simulation = self.generate_point_pattern(nb_points_simulation, simulation_window, seed)
+        # obtained repelled sample
+        rpp = RepelledPointProcess(point_pattern_simulation)
+        repelled_point_pattern_simulation = rpp.repelled_point_pattern(**repelled_params)
+        # samples in support window
+        point_pattern = point_pattern_simulation.restrict_to_window(window)
+        repelled_point_pattern = repelled_point_pattern_simulation.restrict_to_window(window)
+        return point_pattern, repelled_point_pattern
+
+def _simulation_window_repelled_sample(window, add_boundary=None):
+    """Repelled point process should be always sampled in a ball window containing the support window `window`. To reduce boundary effect `add_boundary` can be used to add additional factor to the radius of the simulation window.
+    Args:
+        window (_type_): _description_
+        add_boundary (_type_, optional): _description_. Defaults to None.
+    Returns:
+        _type_: BallWindow where the sample should be generate.
     """
+    if not isinstance(window, AbstractSpatialWindow):
+            raise TypeError("window argument must be an AbstractSpatialWindow")
+    d = window.dimension
+    if isinstance(window, BoxWindow):
+        l = min(np.diff(window.bounds, axis=1)) #length side window
+        r=math.sqrt(d*(l/2)**2) #radius ball window containing box_window
+    else :
+        r = window.radius
+    if add_boundary is not None:
+        r += add_boundary
+    window = BallWindow(center=[0]*d, radius=r)
+    return window
+
+def _simulation_window_param_sobol_sequence(window):
     d = window.dimension
     if isinstance(window, BoxWindow):
         l = np.max(np.diff(window.bounds))
     elif isinstance(window, BallWindow):
         l = 2*window.radius
         nb_points = int(nb_points/window.volume*(l**d))
-    sobol = sp.stats.qmc.Sobol(d=d, scramble=True, **kwargs)
-    points_unit_box = sobol.random(n=nb_points)
-    points = (points_unit_box - 0.5)*l
-    point_pattern = PointPattern(points, window).restrict_to_window(window)
-    return point_pattern
-
-def generate_scramble_sobol_sample(window, nb_points, **kwargs):
-    point_pattern = generate_scramble_sobol_point_pattern(window, nb_points, **kwargs)
-    return point_pattern.points
+    return l
 
 def mutual_nearest_neighbor_matching(X, Y, **KDTree_params):
     r"""Match the set of points ``X`` with a subset of points from ``Y`` based on mutual nearest neighbor matching :cite:`KlaLasYog20`. It is assumed that :math:`|X| \leq |Y|` and that each point in ``X``, resp. ``Y``, can have only one nearest neighbor in ``Y``, resp. ``X``.
@@ -389,13 +361,6 @@ def mutual_nearest_neighbor_matching(X, Y, **KDTree_params):
 
     Returns:
         numpy.ndarray: vector of indices ``matches`` such that ``X[i]`` is matched to ``Y[matches[i]]``.
-
-    Example:
-        .. plot:: code/point_processes/kly_matching.py
-            :include-source: True
-            :caption: KLY  matching
-            :alt: code/point_processes/kly_matching.py
-            :align: center
     """
     if not (X.ndim == Y.ndim == 2):
         raise ValueError(

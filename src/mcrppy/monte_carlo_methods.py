@@ -4,8 +4,8 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 
-from rpppy.plot_functions import _plot_proposal
-from rpppy.utils import _find_sum_of_coef_of_cubic_term
+from mcrppy.plot_functions import _plot_proposal
+from mcrppy.utils import _find_sum_of_coef_of_cubic_term
 
 
 def monte_carlo_method(points, f, weights=None):

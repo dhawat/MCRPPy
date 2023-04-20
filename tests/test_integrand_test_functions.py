@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from rpppy.integrand_test_functions import f_1, f_2, f_3, f_4, f_5
+from mcrppy.integrand_test_functions import f_1, f_2, f_3, f_4, f_5
 
 @pytest.mark.parametrize(
     "x, expected",

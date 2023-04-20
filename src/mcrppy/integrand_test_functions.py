@@ -1,4 +1,4 @@
-from rpppy.spatial_windows import BallWindow, BoxWindow, UnitBallWindow
+from rpppy.spatial_windows import BallWindow, BoxWindow
 import math
 import numpy as np
 
@@ -9,9 +9,11 @@ def indicator(x, window):
 def support_integrands(d):
     return BoxWindow([[-1/2,1/2]]*d)
 
+# Support of radial integrands
 def support_integrands_ball(d):
     return BallWindow(center=[0]*d, radius=1/2)
 
+# bump function times C^2 function
 def f_1(x):
     d = x.shape[1]
     support = support_integrands_ball(d)
@@ -24,10 +26,8 @@ def exact_integral_f_1(d):
     return None
 
 # indicator function
-
 def f_2(x):
     d = x.shape[1]
-    #radius of the biggest BallWindow included in support_integrands
     support = support_integrands_ball(d)
     return indicator(x, support)
 
@@ -35,6 +35,7 @@ def exact_integral_f_2(d):
     r= support_integrands_ball(d).radius
     return BallWindow(center=[0]*d, radius=r).volume
 
+# sinusoidal C^2 function
 def f_3(x):
     d = x.shape[1]
     support = support_integrands(d)
@@ -50,7 +51,6 @@ def f_4(x, a=30, c=10):
 def exact_integral_f_4(d):
     return 0
 
-#old f_4
 def f_5(x, a=10, c=10):
     _, d = x.shape
     support = support_integrands(d)

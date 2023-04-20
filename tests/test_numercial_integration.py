@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from structure_factor.spatial_windows import UnitBallWindow, BoxWindow
 from structure_factor.point_pattern import PointPattern
-import rpppy.monte_carlo_methods as ni
+import mcrppy.monte_carlo_methods as ni
 import math
 
 

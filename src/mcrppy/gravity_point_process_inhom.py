@@ -1,14 +1,14 @@
 from curses import window
-from rpppy.point_pattern import PointPattern
+from mcrppy.point_pattern import PointPattern
 import numpy as np
 import copy
 #from numba import jit
 from multiprocessing import Pool, freeze_support
 from functools import partial
-from rpppy.coulomb_force import force_k
-from rpppy.utils import sort_output_push_point, _sort_point_pattern, volume_unit_ball
+from mcrppy.coulomb_force import force_k
+from mcrppy.utils import sort_output_push_point, _sort_point_pattern, volume_unit_ball
 from scipy.spatial import KDTree
-from rpppy.spatial_windows import subwindow_parameter_max
+from mcrppy.spatial_windows import subwindow_parameter_max
 
 class GravityPointProcess:
     def __init__(self, point_pattern):
