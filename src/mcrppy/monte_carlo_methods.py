@@ -1,171 +1,329 @@
+import math
+import pickle
 import statistics as stat
-import warnings
-import scipy as sp
+import time
+from multiprocessing import freeze_support
+from multiprocessing.pool import Pool
 
+import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
+import pandas as pd
+import psutil
+import statsmodels.api as sm
+from dppy.multivariate_jacobi_ope import MultivariateJacobiOPE
+from scipy import stats
 
-from mcrppy.plot_functions import _plot_proposal
-from mcrppy.utils import _find_sum_of_coef_of_cubic_term, volume_unit_ball
-from mcrppy.spatial_windows import BoxWindow
+from mcrppy.monte_carlo_base import (bandwidth_0_delyon_portier,
+                                       control_variate_mc,
+                                       delyon_portier_mc,
+                                       estimate_control_variate_parameter,
+                                       estimate_control_variate_proposal,
+                                       monte_carlo_method)
+from mcrppy.point_pattern import PointPattern
+from mcrppy.point_processes import BinomialPointProcess, ScrambleSobolPointProcess
+from mcrppy.repelled_point_process import RepelledPointProcess
+from mcrppy.spatial_windows import BallWindow, BoxWindow
+from mcrppy.utils import regression_line, error, mse
+
+def mc_f_dict(type_mc, se=True):
+    d = {}
+    d["m_"+type_mc]=[]
+    d["std_"+type_mc]=[]
+    if se:
+        d["error_"+type_mc]=[]
+    return d
+
+def mc_results(d, nb_points_list,
+               nb_samples, support_window,
+               fct_list, fct_names,
+               exact_integrals=None,
+               estimators=None,
+               nb_point_cv=500,
+               file_name=None,
+               nb_cores=7,
+               pool_dpp=False,
+               **repelled_params):
+    if estimators is None:
+        estimators = ["MC", "MCRB", "MCDPP",
+                      "MCKS_h0", "MCKSc_h0", "RQMC", "MCCV"]
+    else :
+        estimators_all = ["MC", "MCRB", "MCDPP",
+                      "MCKS_h0", "MCKSc_h0", "RQMC", "MCCV"]
+        if sum([k not in estimators_all for k in estimators])!=0:
+            raise ValueError("The allowed estimators are {}".format(estimators_all))
+
+    print("d=", d, ", nb samples=", nb_samples, ", nb points=", nb_points_list)
+    print("------------------------------------------------")
+    results = {}
+    nb_points_used=[]
+    time_1 = time.time()
+    MC, MCRB = None, None, None
+    RQMC, MCCV, MCDPP =  None, None, None
+    MCKS_h0, MCKSc_h0 = None, None
+    for n in nb_points_list :
+        time_mc = {k:0 for k in estimators}
+        # Push Binomial
+        ## Push Binomial pp
+        time_start = time.time()
+        repelled_binomial_pp = _repelled_binomial_samples(nb_samples=nb_samples,
+                                                          nb_points=n, window=support_window, nb_cores=nb_cores, **repelled_params)
+        time_end = time.time() - time_start
+        time_mc["MCRB"]=[int(time_end/60), (time_end%60)]
+        mean_nb_points_rbpp= int(stat.mean([p.points.shape[0] for p in repelled_binomial_pp]))
+        nb_points_used.append(mean_nb_points_rbpp)
+        ## MCRB
+        MCRB = mc_results_n(pp_list=repelled_binomial_pp, type_mc="MCRB", mc_f_n=MCRB, fct_list=fct_list, fct_names=fct_names, exact_integrals=exact_integrals)
+
+        if "MC" in estimators:
+            # Binomial
+            ## Binomial pp
+            time_start = time.time()
+            binomial_pp = _binomial_samples(nb_samples=nb_samples,
+                                            nb_points=mean_nb_points_rbpp,
+                                            window=support_window)
+            time_end = time.time() - time_start
+            time_mc["MC"]=[int(time_end/60), time_end%60]
+            ## MC classic
+            MC = mc_results_n(pp_list=binomial_pp, type_mc="MC", mc_f_n=MC, fct_list=fct_list, fct_names=fct_names, exact_integrals=exact_integrals)
+
+        if "MCDPP" in estimators:
+            # DPP Bardenet Hardy
+            ## DPP pp
+            time_start = time.time()
+            # dpp samples in [-1, 1]^d
+            dpp_samples = _dpp_samples(nb_points=mean_nb_points_rbpp, d=d, nb_samples=nb_samples, nb_cores=nb_cores, pool_dpp=pool_dpp)
+            #rescale points to be in support_window
+            dpp_pp_scaled = [PointPattern(p/2, window=support_window) for p in dpp_samples]
+            ##MCDPP
+            #scaled weight
+            weights_dpp = [_mcdpp_weights(p, eval_pointwise=True)
+                        for p in dpp_samples]
+            time_end = time.time() - time_start
+            time_mc["MCDPP"]=[int(time_end/60), time_end%60]
+            MCDPP = mc_results_n(pp_list=dpp_pp_scaled, type_mc="MCDPP", mc_f_n=MCDPP,
+                                fct_list=fct_list,
+                                fct_names=fct_names,exact_integrals=exact_integrals,
+                                weights=weights_dpp)
+
+        if "RQMC" in estimators:
+            #RQMC
+            ## Scrambeled Sobol pp
+            time_start = time.time()
+            sobol_pp = _scramble_sobol_samples(nb_samples=nb_samples, nb_points=mean_nb_points_rbpp, window=support_window)
+            time_end = time.time() - time_start
+            time_mc["RQMC"]=[int(time_end/60), time_end%60]
+            ## RQMC
+            RQMC = mc_results_n(pp_list=sobol_pp, type_mc="RQMC", mc_f_n=RQMC, fct_list=fct_list, fct_names=fct_names, exact_integrals=exact_integrals)
+
+        if "MCKS_h0" in estimators:
+            time_start9 = time.time()
+            MCKS_h0= mc_results_n(pp_list=binomial_pp, type_mc="MCKS_h0",
+                                mc_f_n=MCKS_h0,
+                                fct_list=fct_list,
+                                fct_names=fct_names,
+                                exact_integrals=exact_integrals,
+                                correction=False)
+            time_end = time.time() - time_start9
+            time_mc["MCKS_h0"]=[int(time_end/60), time_end%60]
 
 
-def monte_carlo_method(points, f, weights=None):
-    if weights is None:
-        points_nb = points.shape[0]
-        weights = 1/points_nb
-    return np.sum(f(points)*weights)
+        if "MCKSc_h0" in estimators:
+            time_start10 = time.time()
+            MCKSc_h0= mc_results_n(pp_list=binomial_pp,
+                                    type_mc="MCKSc_h0",
+                                    mc_f_n=MCKSc_h0,
+                                    fct_list=fct_list,
+                                    fct_names=fct_names,
+                                    exact_integrals=exact_integrals,
+                                    correction=True)
+            time_end = time.time() - time_start10
+            time_mc["MCKSc_h0"]=[int(time_end/60), time_end%60]
 
-def importance_sampling_mc(points, f, proposal, weights=None):
-    h = lambda x: f(x)/proposal(x)
-    return monte_carlo_method(points, h, weights)
+        if "MCCV" in estimators:
+            #MC Control variate
+            time_start11 = time.time()
+            binomial_pp = _binomial_samples(nb_samples=nb_samples, nb_points=mean_nb_points_rbpp, window=support_window)
+            MCCV = mc_results_n(pp_list=binomial_pp, type_mc="MCCV",
+                                       mc_f_n=MCCV, fct_list=fct_list,fct_names=fct_names, exact_integrals=exact_integrals, nb_point_cv=nb_point_cv, support_window_cv=support_window)
+            time_end = time.time() - time_start11
+            time_mc["MCCV"]=[int(time_end/60), time_end%60]
 
-def control_variate_mc(points, f, proposal, mean_proposal, c=None, weights=None):
-    if c is None:
-        c= estimate_control_variate_parameter(points, f, proposal)
-    h = lambda x: f(x) - c*(proposal(x) - mean_proposal)
-    return monte_carlo_method(points, h, weights)
+        print("----------------------------------------------")
+        print("N expected=", n, ", N obtained", mean_nb_points_rbpp)
+        print("Time =", time_mc)
+        print("----------------------------------------------")
 
-def estimate_control_variate_parameter(points, f, proposal):
-    r"""
-    :math:`\frac{\sum_{\mathbf{x} \in \mathcal{B}^{\prime} } f(\mathbf{x}) (h(\mathbf{x}) - \bar{h})}{\sum_{\mathbf{x} \in \mathcal{B}^{\prime}} (h(\mathbf{x}) - \bar{h})^2}`
-    """
-    a  = proposal(points) - stat.mean(proposal(points))
-    numerator = sum(f(points)*a)
-    denominator = sum(a**2)
-    return numerator/denominator
-#! add test
-def estimate_control_variate_proposal(points, f, poly_degree=2, plot=False):
-    d = points.shape[1]
-    y = f(points)
-    # create a polynomial features object to create 'poly_degree' degree polynomial features
-    poly = PolynomialFeatures(degree=poly_degree, include_bias=False)
-    # transform the input data to include the 'poly_degree' degree polynomial features
-    points_poly = poly.fit_transform(points)
-    # create a linear regression model
-    model = LinearRegression()
-    # fit the model to the data
-    model.fit(points_poly, y)
-    # the regressed model
-    proposal = lambda x: model.predict(poly.fit_transform(x))
-    print("coef", model.coef_)
-    if plot:
-        _plot_proposal(f, proposal, dim=points.shape[1])
-    # mean of proposal for centered uniform law over the unit cube
-    if poly_degree==2:
-        d = points.shape[1]
-        mean_proposal = model.intercept_ + _find_sum_of_coef_of_cubic_term(proposal, d)/12
-        print("Mean proposal theoretical:", mean_proposal, "Estiamted:", np.mean(proposal(points)) )
-    elif poly_degree==1:
-        mean_proposal= model.intercept_
+    time_2 = time.time() - time_1
+    print("Time all", int(time_2/60), "min", time_2%60, "s")
+    for k in estimators:
+        results[k] = locals()[k]
+    if file_name is not None:
+        with open(file_name, 'wb') as handle:
+            pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    return results, nb_points_used
+
+def mc_results_n( pp_list, type_mc, fct_list,
+                 fct_names,
+                 exact_integrals=None,
+                 mc_f_n=None,
+                 weights=None,
+                 correction=True,
+                 verbose=True,
+                 nb_point_cv=None,
+                 support_window_cv=None):
+    print("For", type_mc)
+    print("---------------")
+    if mc_f_n is None:
+        mc_f_n = {}
+        for name in fct_names:
+            mc_f_n["mc_results_" +name] = mc_f_dict(type_mc=type_mc)
+    i=0
+    if type_mc=="MCCV":
+        points_cv_proposal= support_window_cv.rand(n=nb_point_cv, seed=0)
+        points_cv_param_estimate= support_window_cv.rand(n=nb_point_cv, seed=1)
+    for f,name in zip(fct_list, fct_names):
+        if type_mc=="MCCV":
+            proposal, m_proposal = estimate_control_variate_proposal(points=points_cv_proposal, f=f)
+            c = estimate_control_variate_parameter(points=points_cv_param_estimate, f=f, proposal=proposal)
+            mc_values=[control_variate_mc(points=p.points,
+                                                   f=f,
+                                                   proposal=proposal,
+                                                   mean_proposal= m_proposal,
+                                                   c=c)
+                      for p in pp_list]
+        elif type_mc=="MCDPP":
+            mc_values = [monte_carlo_method(points=p.points, f=f, weights=w)
+                         for (p,w) in zip(pp_list, weights)]
+        elif type_mc in ["MCKS", "MCKSc"]:
+            mc_values = [delyon_portier_mc(point_pattern=p,
+                                                    f=f,
+                                                   correction=correction)
+                        for p in pp_list]
+        elif type_mc in ["MCKS_h0", "MCKSc_h0"]:
+            mc_values = [delyon_portier_mc(point_pattern=p, f=f,
+                                                    bandwidth=bandwidth_0_delyon_portier(p.points),
+                                                   correction=correction)
+                        for p in pp_list]
+        elif type_mc in ["MC", "MCRB", "RQMC"]:
+            mc_values = [monte_carlo_method(points=p.points, f=f) for p in pp_list]
+        else:
+            raise ValueError("The possible Monte Carlo methods are : MC, MCRB, RQMC, MCDPP, MCCV, MCKS_h0, MCKSc_h0, MCKS, MCKSc.")
+        #print(mc_f_n["mc_results_f_{}".format(i)].keys(), type_mc)
+        # mean MC method of type 'type_mc'
+        mean_mc = stat.mean(mc_values)
+        mc_f_n["mc_results_" + name]["m_"+ type_mc].append(stat.mean(mc_values))
+        # var MC method of type 'type_mc'
+        var_mc = stat.mean((mc_values - mean_mc)**2)
+        mc_f_n["mc_results_" + name]["std_"+ type_mc].append(math.sqrt(var_mc))
+        # square erreur MC method of type 'type_mc'
+        if exact_integrals is not None:
+            integ_f= exact_integrals[i]
+            mc_f_n["mc_results_" + name]["error_"+ type_mc].append(error(mc_values, integ_f))
+        # print MSE
+        if verbose:
+            print("FOR " + name)
+            m_list = mc_f_n["mc_results_" + name]["m_"+ type_mc]
+            std_list = mc_f_n["mc_results_" + name]["std_"+ type_mc]
+            print( "std=", std_list)
+            if exact_integrals is not None:
+                print("MSE=", mse(m_list, std_list, integ_f))
+        i+=1
+    return mc_f_n
+
+# data frame of the MSE of MC methods for N = nb_point_list[idx_nb_points]
+def dataframe_mse_results(mc_results, fct_names, exact_integrals, nb_sample, idx_nb_point=-1):
+    type_mc = mc_results.keys()
+    mse_dict={}
+    for name_f, integ_f in zip(fct_names, exact_integrals):
+        mse_dict["MSE("+ name_f + ")"]={}
+        mse_dict["std(MSE(" + name_f + "))"]={}
+        for t in type_mc:
+            m_f = mc_results[t]["mc_results_" + name_f]["m_"+ t]
+            std_f = mc_results[t]["mc_results_"+ name_f]["std_"+ t]
+            mse_f = mse(m_f, std_f, integ_f, verbose=False)
+            std_mse = np.array(std_f/np.sqrt(nb_sample))
+            mse_dict["MSE(" + name_f + ")"][t] = mse_f[idx_nb_point]
+            mse_dict["std(MSE("+ name_f +"))"][t] = std_mse[idx_nb_point]
+    return pd.DataFrame(mse_dict)
+
+# Kolmogorov Smirniv test for residual of the liear regression to test if the residual is Gaussian
+# q-q plot pf the residual of the linear regresssion of log(std) w.r.t. log(N)
+def dataframe_residual_test(mc_list, nb_point_list, fct_names, test_type="SW", **kwargs):
+    result_test_dict = {}
+    type_mc = mc_list.keys()
+    for name in fct_names :
+        result_test_f_dict = {}
+        for t in type_mc:
+            std_f = mc_list[t]["mc_results_"+ name]["std_"+ t]
+            _, _, _, _, result_test = regression_line(nb_point_list, std_f, residual=True,residual_normality_test=test_type, **kwargs)
+            result_test_f_dict[t] =  ("stat={0:.3f}".format(result_test[0]), "p={0:.3}".format(result_test[1]))
+        result_test_dict[name] = result_test_f_dict
+    return pd.DataFrame(result_test_dict)
+
+
+# Mann-Whitney test for the (square) errors of the method of type 'type_mc_test' with the others methods
+def dataframe_error_test(mc_list, nb_point_list, fct_name, type_mc_test="MCRB"):
+    mw_test_dict = {}
+    type_mc = list(mc_list.keys())
+    nb_nb_points = len(nb_point_list)
+    #MC methods to be tested with type_mc_to_test
+    type_mc.remove(type_mc_test)
+    error_test = mc_list[type_mc_test]["mc_results_"+fct_name]["error_"+ type_mc_test]
+    for t in type_mc:
+        error_tested_with = mc_list[t]["mc_results_"+fct_name]["error_"+ t]
+        mw_test_N_dict = {}
+        for n in range(nb_nb_points):
+            mw_test = stats.mannwhitneyu(error_test[n], error_tested_with[n])
+            mw_test_N_dict["N={}".format(nb_point_list[n])] =  ("stat={0:.3f}".format(mw_test[0]), "p={0:.3}".format(mw_test[1]))
+        mw_test_dict[type_mc_test+ " and "+ t] = mw_test_N_dict
+    return pd.DataFrame(mw_test_dict)
+
+def _repelled_binomial_samples(nb_samples, nb_points, window, nb_cores=4, **repelled_params):
+    binomial = BinomialPointProcess()
+    repelled_pp = []
+    for _ in range(nb_samples):
+        _, rpp = binomial.generate_repelled_point_pattern(nb_points=nb_points, window=window, nb_cores=nb_cores, **repelled_params)
+        repelled_pp.append(rpp)
+    return repelled_pp
+
+def _binomial_samples(nb_samples, nb_points, window):
+    binomial = BinomialPointProcess()
+    binomial_pp = [binomial.generate_point_pattern(nb_points=nb_points, window=window) for _ in range(nb_samples)]
+    return binomial_pp
+
+def _scramble_sobol_samples(nb_samples, nb_points, window):
+    sobol = ScrambleSobolPointProcess()
+    sobol_pp = [sobol.generate_point_pattern(nb_points=nb_points, window=window) for _ in range(nb_samples)]
+    return sobol_pp
+
+def _multivariate_jacobi_samples(nb_points, d, nb_samples=None):
+    jac_params = np.array([[0, 0]]*d) #jaccobi measure=1
+    dpp = MultivariateJacobiOPE(nb_points, jac_params)
+    if nb_samples is not None:
+        dpp_samples = [dpp.sample() for _ in range(nb_samples)]
     else:
-        mean_proposal=np.mean(proposal(points))
-    return proposal, mean_proposal
+        dpp_samples = dpp.sample()
+    return dpp_samples
 
+def _dpp_samples(nb_points, d, nb_samples, nb_cores, pool_dpp):
+    if pool_dpp:
+        freeze_support()
+        with Pool(processes=nb_cores) as pool:
+            #print("Number of processes in the DPP pool ",pool._processes)
+            dpp_samples = pool.starmap(_multivariate_jacobi_samples, [(nb_points, d)]*nb_samples)
+        pool.close()
+        pool.join()
 
-#! The following is not used for the moment
-def delyon_portier_mc(f, point_pattern, bandwidth=None, correction=False):
-    points = point_pattern.points
-    nb_points = points.shape[0]
-    numerator = f(points)
-    if bandwidth is None:
-        #start_time = time.time()
-        bandwidth=find_bandwidth(point_pattern, f, correction).x.item()
-        #end_time=time.time()-start_time
-        #print("Time bandwidth search=", int(end_time/60), "min", (end_time%60), "s")
-    denominator = np.array([leave_one_out_kernel_estimator(i, points[i], points, bandwidth) for i in range(nb_points)])
-    if correction:
-        v = np.array([variance_kernel(i, points[i], points, bandwidth) for i in range(nb_points)])
-        correction = 1 - v/denominator**2
-        result = np.sum(numerator/denominator*correction)/nb_points
     else:
-        result = np.sum(numerator/denominator)/nb_points
-    return result
+        dpp_samples = _multivariate_jacobi_samples(nb_points=nb_points, d=d, nb_samples=nb_samples)
+    return dpp_samples
 
-def leave_one_out_kernel_estimator(idx_out, x, points, bandwidth):
-    nb_points = points.shape[0]
-    d = points.shape[1]
-    points = np.delete(points, idx_out, axis=0)
-    estimator = np.sum(kernel((x-points)/bandwidth , choice="DelPor"))
-    estimator /= (nb_points - 1)*bandwidth**d
-    if estimator==0:
-        warnings.warn(message="Leave-one-out estimator is 0. hint: increase bandwidth value.")
-    return estimator
-
-def bandwidth_0_delyon_portier(points):
-    d = points.shape[1]
-    nb_points = points.shape[0]
-    sigma_2 = stat.mean([stat.stdev(points[:,i])**2 for i in range(d)])
-    numerator = d*2**(d+5)*sp.special.gamma(d/2 + 3)
-    denominator = (2*d +1)*nb_points
-    return np.sqrt(sigma_2)*(numerator/denominator)**(1/(4+d))
-
-def kernel(x, choice="DelPor"):
-    d = x.shape[1]
-    norm_x = np.linalg.norm(x, axis=1)
-    support = (norm_x < 1)*1
-    if choice=="DelPor":
-        k = 1/(2*volume_unit_ball(d))*(d+1)*(d+2 -(d+3) * norm_x)* support
-    elif choice=="Epanechnikov":
-        k = 1/(2*volume_unit_ball(d))*(d+2)*(1 - norm_x**2)* support
-    return k
-
-def variance_kernel(idx_out, x, points, bandwidth):
-    nb_points = points.shape[0]
-    d = points.shape[1]
-    leave_one_out = leave_one_out_kernel_estimator(idx_out, x, points, bandwidth)
-    points = np.delete(points, idx_out, axis=0)
-    ker = kernel((x-points)/bandwidth, choice="DelPor")/bandwidth**d
-    result = np.sum((ker - leave_one_out)**2)/((nb_points-1)*(nb_points-2))
-    return result
-
-def integrand_estimate(x, f, point_pattern, bandwidth, h_0=None):
-    #eq (4) DelPor2016
-    points = point_pattern.points
-    if h_0 is None:
-        h_0 = bandwidth_0_delyon_portier(points)
-    points, numerator, denominator=_integrand_estimate_core( f, point_pattern, bandwidth, h_0)
+def _mcdpp_weights(points, eval_pointwise=True, scale=None, jacobi_params=None):
     nb_points, d = points.shape
-    kernel_factor = kernel((x-points)/h_0, choice="Epanechnikov")/(h_0**d)
-    estimate = np.sum(numerator/denominator*kernel_factor)/nb_points
-    return estimate
-
-def integral_integrand_estimate(f, point_pattern, bandwidth, h_0=None):
-    points = point_pattern.points
-    if h_0 is None:
-        h_0 = bandwidth_0_delyon_portier(points)
-    #eq after eq (5) DelPor2016
-    points, numerator, denominator=_integrand_estimate_core( f, point_pattern, bandwidth, h_0)
-    nb_points = points.shape[0]
-    return np.sum(numerator/denominator)/nb_points
-
-def _integrand_estimate_core( f, point_pattern, bandwidth, h_0):
-    #! support window should be centered boxwindow
-    if not isinstance(point_pattern.window, BoxWindow):
-        raise TypeError(message="Actually, the observation window should be a centered BoxWindow.")
-    points = point_pattern.points
-    d = points.shape[1]
-    l = np.diff(point_pattern.window.bounds, axis=1)[0].item()
-    support = BoxWindow([[-l/2 + h_0, l/2-h_0]]*d) #eq (9) DelPor2016
-    points = points[support.indicator_function(points)]
-    nb_points = points.shape[0]
-    numerator = f(points)
-    bandwidth= bandwidth.item()
-    denominator = np.array([leave_one_out_kernel_estimator(i, points[i], points, bandwidth) for i in range(nb_points)])
-    return points, numerator, denominator
-
-def find_bandwidth(point_pattern, f, correction, **kwargs):
-    points = point_pattern.points
-    x_0=bandwidth_0_delyon_portier(points)
-    res = sp.optimize.minimize(_func_to_optimize, x_0, (point_pattern, f, correction), **kwargs)
-    return res
-
-def _func_to_optimize(bandwidth, point_pattern, f, correction):
-    #function to optimize to find the bandwidth, Sec 5.2 DelPor2016
-    points = point_pattern.points
-    nb_points = points.shape[0]
-    f_tilde = lambda x:np.array([integrand_estimate(x[i], f, point_pattern, bandwidth) for i in range(nb_points)])
-    estimate_integral_f_tilde= delyon_portier_mc(f_tilde, point_pattern, bandwidth, correction)
-    integral_f_tilde = integral_integrand_estimate(f, point_pattern, bandwidth)
-    return abs(estimate_integral_f_tilde - integral_f_tilde)
+    if scale is None:
+        scale = 1/2**d #for support equal [-1/2,1/2]^d
+    if jacobi_params is None:
+        jacobi_params = np.array([[0, 0]]*d) #jaccobi measure=1
+    dpp = MultivariateJacobiOPE(nb_points, jacobi_params)
+    weights_dpp = scale/dpp.K(points, eval_pointwise=eval_pointwise)
+    return weights_dpp

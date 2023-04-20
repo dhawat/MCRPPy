@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 from mcrppy.spatial_windows import UnitBallWindow, BoxWindow
 from mcrppy.point_pattern import PointPattern
-import mcrppy.monte_carlo_methods as ni
-from mcrppy.monte_carlo_methods import monte_carlo_method, importance_sampling_mc, control_variate_mc, estimate_control_variate_parameter, estimate_control_variate_proposal
+import mcrppy.monte_carlo_base as ni
+from mcrppy.monte_carlo_base import monte_carlo_method, importance_sampling_mc, control_variate_mc, estimate_control_variate_parameter, estimate_control_variate_proposal
 import math
 
 
