@@ -49,7 +49,6 @@ def estimate_control_variate_proposal(points, f, poly_degree=2, plot=False):
     model.fit(points_poly, y)
     # the regressed model
     proposal = lambda x: model.predict(poly.fit_transform(x))
-    print("coef", model.coef_)
     if plot:
         _plot_proposal(f, proposal, dim=points.shape[1])
     # mean of proposal for centered uniform law over the unit cube

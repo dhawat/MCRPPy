@@ -1,6 +1,7 @@
 from mcrppy.spatial_windows import BallWindow, BoxWindow
 import math
 import numpy as np
+import warnings
 
 def indicator(x, window):
     return window.indicator_function(x)*1
@@ -15,6 +16,7 @@ def support_integrands_ball(d):
 
 # bump function times C^2 function
 def f_1(x):
+    warnings.filterwarnings('ignore')
     d = x.shape[1]
     support = support_integrands_ball(d)
     norm_x = np.linalg.norm(x, axis=1)

@@ -19,12 +19,12 @@ def _plot_proposal(f, proposal, dim=2):
     else:
         raise ValueError("Actually, only available for 2D")
 
-# plot monte_carlo_setup
+# plot monte_carlo_methods
 
-def plot_mc_results(d, mc_list, nb_point_list, fct_list, fct_names, log_scale=True, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=False, plot_fct=False, nb_subsample_nb_points=None, type_mc=None):
+def plot_mc_results(d, mc_list, nb_points_list, fct_list, fct_names, log_scale=False, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=False, plot_fct=False, nb_subsample_nb_points=None, estimators=None):
     nb_fct = len(fct_list)
-    if type_mc is None:
-        type_mc = mc_list.keys()
+    if estimators is None:
+        estimators = mc_list.keys()
     nb_column = _nb_column_plot(plot_std, plot_error, plot_fct)
     color_list = ["b", "k", "g", "m",  "orange", "gray", "c","y", "darkred", "pink"]
     marker_list = [ "^", "v", "<", ">", "*","o", "x", "1", ".",]
@@ -36,24 +36,24 @@ def plot_mc_results(d, mc_list, nb_point_list, fct_list, fct_names, log_scale=Tr
         if plot_std:
             #std
             ax = fig.add_subplot(nb_column, nb_fct, nb_column + nb_column*(j-1))
-            add_plot_std(d, ax, mc_list, nb_point_list,
+            add_plot_std(d, ax, mc_list, nb_points_list,
                          color_list,
                          marker_list=marker_list,
                          fct_name=fct_names[j-1],
-                         type_mc=type_mc)
+                         estimators=estimators)
             if plot_error:
                 #error
                 ax = fig.add_subplot(nb_column, nb_fct, nb_column+ nb_column*(j-1))
-                add_plot_error(d, ax, mc_list, type_mc,
-                               nb_point_list,
+                add_plot_error(d, ax, mc_list, estimators,
+                               nb_points_list,
                                error_type,
                                color_list,
                                marker_list = marker_list,
                                log_scale=log_scale, fct_name=fct_names[j-1], nb_subsample=nb_subsample_nb_points)
         else:
             ax = fig.add_subplot( nb_column, nb_fct, nb_column+ nb_column*(j-1))
-            add_plot_error(d, ax, mc_list, type_mc,
-                           nb_point_list,
+            add_plot_error(d, ax, mc_list, estimators,
+                           nb_points_list,
                            error_type,
                            color_list,
                            marker_list = marker_list,
@@ -81,14 +81,14 @@ def add_plot_functions(fig, plot_dim, nb_fct, fct,  idx_row, nb_column, fct_name
     if fct_name is not None:
         ax.set_title(r"$%s$"%fct_name)
 
-def add_plot_std(d, ax, mc_list, nb_point_list, color_list, marker_list, fct_name=None, type_mc=None):
-    log_nb_pts = np.log([nb_point_list]).T
-    if type_mc is None:
-        type_mc = mc_list.keys()
+def add_plot_std(d, ax, mc_list, nb_points_list, color_list, marker_list, fct_name=None, estimators=None):
+    log_nb_pts = np.log([nb_points_list]).T
+    if estimators is None:
+        estimators = mc_list.keys()
     i=0
-    for t in type_mc:
+    for t in estimators:
         std_f = mc_list[t]["mc_results_" + fct_name]["std_"+ t]
-        reg_line, slope, std_reg = regression_line(nb_point_list, std_f)
+        reg_line, slope, std_reg = regression_line(nb_points_list, std_f)
         label_with_slope = t+": slope={0:.2f}".format(slope)+ ", std={0:.2f}".format(std_reg)
         ax.scatter(log_nb_pts, np.log(std_f),
                    c=color_list[i],
@@ -106,19 +106,19 @@ def add_plot_std(d, ax, mc_list, nb_point_list, color_list, marker_list, fct_nam
     ax.set_ylabel(r"$\log(\sigma)$")
     ax.legend()
 
-def add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_list, marker_list, log_scale, fct_name=None, nb_subsample=None):
+def add_plot_error(d, ax, mc_list, estimators, nb_points_list, error_type, color_list, marker_list, log_scale, fct_name=None, nb_subsample=None):
     i=0
-    for t in type_mc:
+    for t in estimators:
         if error_type in ["SE", "Error"]:
             error_f = mc_list[t]["mc_results_"+fct_name]["error_"+ t]
             if error_type=="SE":
                 error_f = [e**2 for e in error_f]
             if  nb_subsample is not None:
-                idx_subsample = _subsample_nb_points(nb_point_list, nb_subsample=nb_subsample)
-                nb_point_list = [nb_point_list[i] for i in idx_subsample]
+                idx_subsample = _subsample_nb_points(nb_points_list, nb_subsample=nb_subsample)
+                nb_points_list = [nb_points_list[i] for i in idx_subsample]
                 error_f = [error_f[i] for i in idx_subsample]
-            x = np.array(nb_point_list) +25*i
-            nb_list_expended = [[n]*len(e) for n,e in zip(nb_point_list, error_f)]
+            x = np.array(nb_points_list) +25*i
+            nb_list_expended = [[n]*len(e) for n,e in zip(nb_points_list, error_f)]
             #print("here in plot", np.array(nb_list_expended), error_f)
             ax.scatter(np.array(nb_list_expended) +25*i,
                         error_f,
@@ -132,8 +132,7 @@ def add_plot_error(d, ax, mc_list, type_mc, nb_point_list, error_type, color_lis
                         patch_artist=True, boxprops=dict(facecolor=color_list[i]),
                         whiskerprops=dict(color=color_list[i]),
                         showmeans=True,
-                        #showmeans=True,
-                        #meanprops=dict(marker='.', color='r', markeredgecolor='r'),
+                        meanprops=dict(marker='.', color='r', markeredgecolor='r'),
                         sym='',
                         )
             #ax.legend([a["boxes"][0]], [t], loc='lower left')
@@ -162,16 +161,16 @@ def _nb_column_plot(plot_std, plot_error, plot_fct):
 
 
 
-def qq_plot_residual(mc_list, nb_point_list, fct_names, save_fig=None, **kwargs):
-    type_mc = mc_list.keys()
+def qq_plot_residual(mc_list, nb_points_list, fct_names, save_fig=None, **kwargs):
+    estimators = mc_list.keys()
     fct_nb = len(fct_names)
     color_list = ["b", "k", "g", "m", "gray", "c","y", "darkred", "orange", "pink"]
-    fig, ax = plt.subplots(fct_nb, 1, figsize=(4, int(3*fct_nb)))
+    fig, ax = plt.subplots(1, fct_nb, figsize=(4, int(3*fct_nb)))
     for i in range(fct_nb):
         j=0
-        for t in type_mc:
+        for t in estimators:
             std_f = mc_list[t]["mc_results_"+ fct_names[i]]["std_"+ t]
-            _, _, _, residual = regression_line(nb_point_list, std_f, residual=True,residual_normality_test=None, **kwargs)
+            _, _, _, residual = regression_line(nb_points_list, std_f, residual=True,residual_normality_test=None, **kwargs)
             # pp = sm.ProbPlot(residual, fit=True)
             # qq = pp.qqplot(marker='.', markerfacecolor=color_list[j], markeredgecolor=color_list[j], alpha=0.3, label=t)
             # sm.qqline(qq.axes[0], line='45', fmt='r--', axis=ax[i], label=t)

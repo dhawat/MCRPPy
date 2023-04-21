@@ -72,7 +72,7 @@ class RepelledPointProcess:
         else:
             points_kd_tree=None
         points_nb = points.shape[0]
-        if nb_cores>1:
+        if nb_cores>1 and points.shape[0]>1000:
             freeze_support()
             with Pool(processes=nb_cores) as pool:
                 new_points = pool.map(
