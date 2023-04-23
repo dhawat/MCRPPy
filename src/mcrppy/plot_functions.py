@@ -126,6 +126,9 @@ def add_plot_error(d, ax, mc_list, estimators, nb_points_list, error_type, color
                         s=5,
                         marker=marker_list[i],
                         label=t)
+            ax.plot(np.array(nb_list_expended),
+                     [0]*len(nb_list_expended),
+                      color="grey", linestyle="--")
             ax.boxplot(error_f, positions=x.tolist(),
                         widths = 20,
                         manage_ticks=False,
@@ -165,7 +168,7 @@ def qq_plot_residual(mc_list, nb_points_list, fct_names, save_fig=None, **kwargs
     estimators = mc_list.keys()
     fct_nb = len(fct_names)
     color_list = ["b", "k", "g", "m", "gray", "c","y", "darkred", "orange", "pink"]
-    fig, ax = plt.subplots(1, fct_nb, figsize=(4, int(3*fct_nb)))
+    fig, ax = plt.subplots(1, fct_nb, figsize=( int(3*fct_nb), 4))
     for i in range(fct_nb):
         j=0
         for t in estimators:
