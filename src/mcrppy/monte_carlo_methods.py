@@ -162,8 +162,12 @@ def mc_results(d, nb_points_list,
     for k in estimators:
         results[k] = locals()[k]
     if file_name is not None:
+        dict_to_save = {"d":d,
+                "nb_point_list": nb_points_used,
+                "mc_result":results
+                }
         with open(file_name, 'wb') as handle:
-            pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(dict_to_save, handle, protocol=pickle.HIGHEST_PROTOCOL)
     return results, nb_points_used
 
 # data frame of the MSE of MC methods for N = nb_points_list[idx_nb_points]
