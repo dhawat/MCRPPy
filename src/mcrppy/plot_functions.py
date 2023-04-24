@@ -109,6 +109,7 @@ def add_plot_std(d, ax, mc_list, nb_points_list, color_list, marker_list, fct_na
 
 def add_plot_error(d, ax, mc_list, estimators, nb_points_list, error_type, color_list, marker_list, log_scale, fct_name=None, nb_subsample=None):
     i=0
+    skip_x=25
     if  nb_subsample is not None:
         idx_subsample = _subsample_nb_points(nb_points_list, nb_subsample=nb_subsample)
         nb_points_list = [nb_points_list[j] for j in idx_subsample]
@@ -117,18 +118,15 @@ def add_plot_error(d, ax, mc_list, estimators, nb_points_list, error_type, color
         if error_type=="SE":
             error_f = [e**2 for e in error_f]
         error_f = [error_f[j] for j in idx_subsample]
-        x = np.array(nb_points_list) +25*i
+        x = np.array(nb_points_list) +skip_x*i
         nb_list_expended = [[n]*len(e) for n,e in zip(nb_points_list, error_f)]
         #print("here in plot", np.array(nb_list_expended), error_f)
-        ax.scatter(np.array(nb_list_expended) +25*i,
+        ax.scatter(np.array(nb_list_expended) +skip_x*i,
                     error_f,
                     c=color_list[i],
                     s=5,
                     marker=marker_list[i],
                     label=t)
-        ax.plot(np.array(nb_list_expended),
-                    [0]*len(nb_list_expended),
-                    color="grey", linestyle="--")
         ax.boxplot(error_f,
                     positions=x.tolist(),
                     widths = 15,
@@ -142,7 +140,7 @@ def add_plot_error(d, ax, mc_list, estimators, nb_points_list, error_type, color
                     showmeans=True,
                     sym='',
                     )
-        #ax.legend([a["boxes"][0]], [t], loc='lower left')
+        ax.hlines(y=0, xmin =nb_points_list[0], xmax=nb_points_list[-1]+skip_x*len(estimators), color="grey", linestyle="--",linewidth=1 )
         i=i+1
     if log_scale:
         #ax.set_xscale("log")

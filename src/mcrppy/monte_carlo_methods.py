@@ -5,11 +5,8 @@ import time
 from multiprocessing import freeze_support
 from multiprocessing.pool import Pool
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import psutil
-import statsmodels.api as sm
 from dppy.multivariate_jacobi_ope import MultivariateJacobiOPE
 from scipy import stats
 
@@ -21,8 +18,6 @@ from mcrppy.monte_carlo_base import (bandwidth_0_delyon_portier,
                                        monte_carlo_method)
 from mcrppy.point_pattern import PointPattern
 from mcrppy.point_processes import BinomialPointProcess, ScrambleSobolPointProcess
-from mcrppy.repelled_point_process import RepelledPointProcess
-from mcrppy.spatial_windows import BallWindow, BoxWindow
 from mcrppy.utils import regression_line, error, mse
 
 def mc_f_dict(type_mc, se=True):
