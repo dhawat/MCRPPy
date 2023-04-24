@@ -44,10 +44,11 @@ def plot_mc_results(d, mc_list, nb_points_list, fct_list, fct_names, log_scale=F
             if plot_error:
                 #error
                 ax = fig.add_subplot(nb_column, nb_fct, nb_column+ nb_column*(j-1))
-                add_plot_error(d, ax, mc_list, estimators,
-                               nb_points_list,
-                               error_type,
-                               color_list,
+                add_plot_error(d, ax, mc_list,
+                               estimators=estimators,
+                               nb_points_list=nb_points_list,
+                               error_type=error_type,
+                               color_list=color_list,
                                marker_list = marker_list,
                                log_scale=log_scale, fct_name=fct_names[j-1], nb_subsample=nb_subsample_nb_points)
         else:
@@ -108,37 +109,40 @@ def add_plot_std(d, ax, mc_list, nb_points_list, color_list, marker_list, fct_na
 
 def add_plot_error(d, ax, mc_list, estimators, nb_points_list, error_type, color_list, marker_list, log_scale, fct_name=None, nb_subsample=None):
     i=0
+    if  nb_subsample is not None:
+        idx_subsample = _subsample_nb_points(nb_points_list, nb_subsample=nb_subsample)
+        nb_points_list = [nb_points_list[j] for j in idx_subsample]
     for t in estimators:
-        if error_type in ["SE", "Error"]:
-            error_f = mc_list[t]["mc_results_"+fct_name]["error_"+ t]
-            if error_type=="SE":
-                error_f = [e**2 for e in error_f]
-            if  nb_subsample is not None:
-                idx_subsample = _subsample_nb_points(nb_points_list, nb_subsample=nb_subsample)
-                nb_points_list = [nb_points_list[i] for i in idx_subsample]
-                error_f = [error_f[i] for i in idx_subsample]
-            x = np.array(nb_points_list) +25*i
-            nb_list_expended = [[n]*len(e) for n,e in zip(nb_points_list, error_f)]
-            #print("here in plot", np.array(nb_list_expended), error_f)
-            ax.scatter(np.array(nb_list_expended) +25*i,
-                        error_f,
-                        c=color_list[i],
-                        s=5,
-                        marker=marker_list[i],
-                        label=t)
-            ax.plot(np.array(nb_list_expended),
-                     [0]*len(nb_list_expended),
-                      color="grey", linestyle="--")
-            ax.boxplot(error_f, positions=x.tolist(),
-                        widths = 20,
-                        manage_ticks=False,
-                        patch_artist=True, boxprops=dict(facecolor=color_list[i]),
-                        whiskerprops=dict(color=color_list[i]),
-                        showmeans=True,
-                        meanprops=dict(marker='.', color='r', markeredgecolor='r'),
-                        sym='',
-                        )
-            #ax.legend([a["boxes"][0]], [t], loc='lower left')
+        error_f = mc_list[t]["mc_results_"+fct_name]["error_"+ t]
+        if error_type=="SE":
+            error_f = [e**2 for e in error_f]
+        error_f = [error_f[j] for j in idx_subsample]
+        x = np.array(nb_points_list) +25*i
+        nb_list_expended = [[n]*len(e) for n,e in zip(nb_points_list, error_f)]
+        #print("here in plot", np.array(nb_list_expended), error_f)
+        ax.scatter(np.array(nb_list_expended) +25*i,
+                    error_f,
+                    c=color_list[i],
+                    s=5,
+                    marker=marker_list[i],
+                    label=t)
+        ax.plot(np.array(nb_list_expended),
+                    [0]*len(nb_list_expended),
+                    color="grey", linestyle="--")
+        ax.boxplot(error_f,
+                    positions=x.tolist(),
+                    widths = 15,
+                    manage_ticks=False,
+                    patch_artist=True,
+                    medianprops= dict(linewidth=0),
+                    boxprops=dict(facecolor=color_list[i]),
+                    whiskerprops=dict(color=color_list[i]),
+                    meanline=True,
+                    meanprops=dict(linestyle='--', linewidth=1.5, color='r'),
+                    showmeans=True,
+                    sym='',
+                    )
+        #ax.legend([a["boxes"][0]], [t], loc='lower left')
         i=i+1
     if log_scale:
         #ax.set_xscale("log")
