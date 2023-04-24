@@ -60,7 +60,7 @@ class RepelledPointProcess:
                     x = np.atleast_2d(x)
             #using force with correction
             else:
-                x = x + epsilon_matrix * force_k(k=k, points=points, intensity=intensity, **kwargs)
+                x = x + epsilon_matrix * force_k(k=k, points=points, intensity=intensity, x=x, **kwargs)
         return x
 
     def repelled_point_process(self, epsilon=None, p=None, stop_time=1, nb_cores=1):

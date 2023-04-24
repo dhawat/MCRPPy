@@ -25,6 +25,28 @@ def test_repelled_point_without_p(k, epsilon, expected):
     result = gravity_pp._repelled_point(k=k, epsilon=epsilon, stop_time=1)
     np.testing.assert_array_almost_equal(result, expected)
 
+# test _repelled_point with many step in time
+@pytest.mark.parametrize(
+    "k, epsilon, t, expected",
+    [
+        (0, 1, 1, np.array([[-0.5, 0.5]])),
+        (0, 1, 2, np.array([[-4/5, 2/5]])),
+        # (1, 1, np.array([[-1/5, -7/5]])),
+        # (2, 1, np.array([[0.7, 0.9]])),
+        # (2, [1, 1], np.array([[0.7, 0.9], [0.7, 0.9]])),
+        # (0, 2.0, np.array([[-1, 1]])),
+        # (0, [2.0, 1], np.array([[-1, 1],[-0.5, 0.5] ]))
+    ],
+)
+def test_repelled_point_wrt_t(k, epsilon, t,  expected):
+    "test pushed point with point_pattern of 3 simple points and one step in time with corrected force"
+    points = np.array([[0, 0], [0, -1], [1, 1]])
+    window = BallWindow(center=[0, 0], radius=2)
+    point_pattern = PointPattern(points, window, intensity=1 / np.pi)
+    gravity_pp = RepelledPointProcess(point_pattern)
+    result = gravity_pp._repelled_point(k=k, epsilon=epsilon, stop_time=t)
+    np.testing.assert_array_almost_equal(result, expected)
+
 # test repelled_point_process without p
 @pytest.mark.parametrize(
     "points, nb_cores, expected",
