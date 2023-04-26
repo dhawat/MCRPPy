@@ -2,50 +2,46 @@ import numpy as np
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../src/'))
-from rpppy.monte_carlo_tests_setup import mc_results
-from rpppy.monte_carlo_test_functions import (f_1, f_2, f_3, f_4, f_5,
+from mcrppy.monte_carlo_methods import mc_results
+from mcrppy.integrand_test_functions import (support_integrands,
+                                             f_1, f_2, f_3,
                                              exact_integral_f_1, exact_integral_f_2,
-                                             exact_integral_f_3, exact_integral_f_4,
-                                             exact_integral_f_5,
-                                             support_integrands)
-import pickle
-
+                                             exact_integral_f_3)
 
 # Setup
 np.random.seed(123)
-nb_sample=100
-nb_core = 30
-nb_point_list=np.arange(50, 1025, 25).tolist()
+nb_samples=100
+nb_cores = 20
+nb_points_list=np.arange(50, 1050, 50).tolist()
+fct_list = [f_1, f_2, f_3]
+fct_names = ["f_1", "f_2", "f_3"]
 estimators = ["MC",
-              "MCP",
-              "RQMC",
+              "MCRB",
               "MCCV",
-              "MCDPP"]
-fct_list = [f_1, f_2, f_3, f_4, f_5]
-fct_names = ["f_1", "f_2", "f_3", "f_4", "f_5"]
+              "RQMC"]
+print("Number of tests: ", len(nb_points_list))
+print("Number of points to be used:", nb_points_list)
+print("Methods to be used:", estimators)
 
 # For d=3
 d=3
-print("for d= ", d)
-exact_integrals= [exact_integral_f_1(d), exact_integral_f_2(d),
-                  exact_integral_f_3(d), exact_integral_f_4(d),
-                  exact_integral_f_5(d)]
+nb_points_list=np.arange(50, 1050, 50).tolist()
+exact_integrals= [exact_integral_f_1(d),
+                  exact_integral_f_2(d),
+                  exact_integral_f_3(d)]
 support_window = support_integrands(d)
 if __name__ == "__main__":
-    mc_results_3d, nb_point_list_used = mc_results(d, nb_point_list,
-                                  nb_sample=nb_sample,support_window=support_window,
-                                  fct_list=fct_list,
-                                  fct_names=fct_names, exact_integrals=exact_integrals,
-                                  estimators=estimators,
-                                  nb_core=nb_core
-                                  )
-
-dict_to_save = {"d":d,
-                "nb_point_list": nb_point_list_used,
-                "mc_result":mc_results_3d
-                }
-with open('mc_results_3d.pickle', 'wb') as handle:
-    pickle.dump(dict_to_save, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    results, nb_points = mc_results(d,
+                                          nb_points_list=nb_points_list,
+                                          nb_samples=nb_samples,
+                                          support_window=support_window,
+                                          fct_list=fct_list,
+                                          fct_names=fct_names,
+                                          exact_integrals=exact_integrals,
+                                          estimators=estimators,
+                                          nb_cores=nb_cores,
+                                          file_name="mc_results_3d_final.pickle"
+                                            )
 
 print("Done with d=", d)
 #------------------------------------------------
