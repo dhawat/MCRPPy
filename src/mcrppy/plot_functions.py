@@ -26,7 +26,7 @@ def plot_mc_results(d, mc_list, nb_points_list, fct_list, fct_names, log_scale=F
     if estimators is None:
         estimators = mc_list.keys()
     nb_column = _nb_column_plot(plot_std, plot_error, plot_fct)
-    color_list = ["b", "k", "g", "m",  "orange", "gray", "c","y", "darkred", "pink"]
+    color_list = ["b", "darkred", "g", "m", "orange", "gray", "c","y", "darkred", "pink"]
     marker_list = [ "^", "v", "<", ">", "*","o", "x", "1", ".",]
     fig= plt.figure(figsize=(int(5*nb_fct),int(4*nb_column)))
     for j in range(1, nb_fct+1) :
@@ -124,7 +124,7 @@ def add_plot_error(d, ax, mc_list, estimators, nb_points_list, error_type, color
         ax.scatter(np.array(nb_list_expended) +skip_x*i,
                     error_f,
                     c=color_list[i],
-                    s=5,
+                    s=1.5,
                     marker=marker_list[i],
                     label=t)
         ax.boxplot(error_f,
@@ -136,7 +136,7 @@ def add_plot_error(d, ax, mc_list, estimators, nb_points_list, error_type, color
                     boxprops=dict(facecolor=color_list[i]),
                     whiskerprops=dict(color=color_list[i]),
                     meanline=True,
-                    meanprops=dict(linestyle='--', linewidth=1.5, color='r'),
+                    meanprops=dict(linestyle='--', linewidth=1.5, color='k'),
                     showmeans=True,
                     sym='',
                     )
