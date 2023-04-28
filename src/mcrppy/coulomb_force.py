@@ -7,9 +7,9 @@ def force_base(x, points, intensity=None, correction=True):
             F(x) = \sum_{z \in \mathcal{Z}, \|z\|_2 \uparrow} \limits \frac{x-z}{\|x-z\|_2^d} - \rho \kappa_d x
 
     Args:
-        x (_type_): 1 times d array
-        points (_type_): N times d array arrange by increasing Euclidean distance from the origine.
-        intensity (_type_): _description_
+        x (np.1darray): d dimensional points on which the force is evaluated (1 times d array).
+        points (np.ndarray): d dimensional points exerting the force (N times d array).
+        intensity (float): Expected number of points exerting the force per unit volume.
     """
     d = points.shape[1]
     x = np.atleast_2d(x)
