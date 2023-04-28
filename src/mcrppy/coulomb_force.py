@@ -3,13 +3,25 @@ from mcrppy.utils import volume_unit_ball
 
 def force_base(x, points, intensity=None, correction=True):
     r"""
+    The Coulomb force exerted by the charged particles `points` on the particule `x` of the same charge as the particles `points`. Formally described by the following equation
+
     .. math::
-            F(x) = \sum_{z \in \mathcal{Z}, \|z\|_2 \uparrow} \limits \frac{x-z}{\|x-z\|_2^d} - \rho \kappa_d x
+
+            F(x) = \sum_{z \in \mathcal{Z}, \|z\|_2 \uparrow} \frac{x-z}{\|x-z\|_2^d} - \rho \kappa_d x,
+
+    where :math:`\mathcal{Z}` is the configuration of points, :math:`\kappa_d` is the volume of the unit ball in :math:`\mathbb{R}^d`, and :math:`\rho` is the expected number of points of :math:`\mathcal{Z}` per unit volume (called intensity).
+    if `correction` is set to False, the expression of :math:`F` does not include the term `\rho \kappa_d x`.
 
     Args:
-        x (np.1darray): d dimensional points on which the force is evaluated (1 times d array).
-        points (np.ndarray): d dimensional points exerting the force (N times d array).
-        intensity (float): Expected number of points exerting the force per unit volume.
+        x (np.ndarray): d-dimensional point on which the force is evaluated (1 times d array).
+        points (np.ndarray): d-dimensional points exerting the force on `x` (N times d array). Default to None.
+        intensity (float, optional): Expected number of points per unit volume.
+        correction (bool, optional): If True the above expression of :math:`F` is used else, the term `\rho \kappa_d x` is removed from the expression of :math:`F`. Default to True.
+
+    Returns:
+        (np.ndarray):
+        Force on `x`(1 times d array).
+
     """
     d = points.shape[1]
     x = np.atleast_2d(x)
@@ -18,28 +30,41 @@ def force_base(x, points, intensity=None, correction=True):
     np.divide(numerator, np.atleast_2d(denominator).T, out=numerator)
     kappa_d = volume_unit_ball(d)
     if correction:
-        # force with correcting error due to infinite sum and arranging from zero
         #! todo error if intensity is None
         force_x = np.sum(numerator, axis=0) - intensity * kappa_d * x
     else:
-        # force while arranging the sum from x
         force_x = np.atleast_2d(np.sum(numerator, axis=0))
     return force_x
 
 
 def force_k(k, points, intensity, x=None, p=None, kd_tree=None):
-    """ Coulombic force exerted by the points in the point_pattern (deprived of x) on x.
-    If p is not None, it corresponds to the force exerted by the points in an ball centered at x of radius p.
+    r""" Coulombic force exerted by `points` on `x` if not None, else, on the k-th point of `points`.
+    If `p` is not None, it corresponds to the force exerted by the points in a ball centered at `x` of radius `p`.
+    Formally, if `p` is None the force expression is
+
+    .. math::
+
+            F(x) = \sum_{z \in \mathcal{Z} \setminus \{x\}, \|z\|_2 \uparrow} \frac{x-z}{\|x-z\|_2^d} - \rho \kappa_d x,
+
+    else,
+
+    .. math::
+
+            F(x) = \sum_{z \in \mathcal{Z} \setminus \{x\} \cap B(x,p), \|z-x\|_2 \uparrow} \frac{x-z}{\|x-z\|_2^d},
+
+    where :math:`\mathcal{Z}` is the configuration of points, :math:`\kappa_d` is the volume of the unit ball in :math:`\mathbb{R}^d`, and :math:`\rho` is the expected number of points of :math:`\mathcal{Z}` per unit volume (called intensity).
+
     Args:
-        x (_type_): _description_
-        point_pattern (_type_): _description_
-        correction (bool, optional): _description_. Defaults to True.
-        p (_type_, optional): _description_. Defaults to None.
-        kd_tree (_type_, optional): _description_. Defaults to None.
-        k (_type_, optional): _description_. Defaults to None.
+        k (int): Index of the point of `points`on which the force is computed.
+        points (np.ndarray): d-dimensional points exerting the force on `x` (N times d array).
+        intensity (float, optional): Expected number of points per unit volume.
+        x (np.ndarray, optional): d-dimensional point on which the force is evaluated (1 times d array). Defaults to None.
+        p (float, optional): Radius of the ball centered at `x` containing the points exerting the force on `x` if not None, else, on the k-th point of `points`. Defaults to None.
+        kd_tree (scipy.spatial.KDTree, optional): kd-tree of `points`. Defaults to None.
 
     Returns:
-        _type_: _description_
+        (np.ndarray):
+        Force on `x` if not None, else, on the k-th point of `points` (1 times d array).
     """
     if x is None:
         x = points[k]
@@ -56,15 +81,8 @@ def force_k(k, points, intensity, x=None, p=None, kd_tree=None):
 
 def _select_point_in_ball(idx_x, points, kd_tree, p):
     """Select the points in the ball of radius p centered at x.
-
-    Args:
-        x (_type_): _description_
-        idx_x (_type_): index of x in the kd_tree
-        kd_tree (_type_): kd_tree of points
-        p (_type_): annulus large radius.
     """
     x = points[idx_x]
     idx_points_in_window = kd_tree.query_ball_point(x=x.ravel(), r=p)
     idx_points_in_window.remove(idx_x)
-    #idx_points_in_annulus = [i if i<idx_x else i-1 for i in idx_points_in_window] #kd tree is built on all points (without removing k)
     return points[idx_points_in_window]
