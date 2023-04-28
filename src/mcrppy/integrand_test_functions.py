@@ -14,7 +14,7 @@ def support_integrands(d):
 def support_integrands_ball(d):
     return BallWindow(center=[0]*d, radius=1/2)
 
-# bump function times C^2 function
+# Bump function times a C^2 function
 def f_1(x):
     warnings.filterwarnings('ignore')
     d = x.shape[1]
@@ -27,7 +27,7 @@ def f_1(x):
 def exact_integral_f_1(d):
     return None
 
-# indicator function
+# Indicator function
 def f_2(x):
     d = x.shape[1]
     support = support_integrands_ball(d)
@@ -37,7 +37,7 @@ def exact_integral_f_2(d):
     r= support_integrands_ball(d).radius
     return BallWindow(center=[0]*d, radius=r).volume
 
-# sinusoidal C^2 function
+# Sinusoidal C^2 function
 def f_3(x):
     d = x.shape[1]
     support = support_integrands(d)

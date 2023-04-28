@@ -19,8 +19,7 @@ def force_base(x, points, intensity=None, correction=True):
         correction (bool, optional): If True the above expression of :math:`F` is used else, the term `\rho \kappa_d x` is removed from the expression of :math:`F`. Default to True.
 
     Returns:
-        (np.ndarray):
-        Force on `x`(1 times d array).
+        np.ndarray: Force on `x`(1 times d array).
 
     """
     d = points.shape[1]
@@ -63,8 +62,7 @@ def force_k(k, points, intensity, x=None, p=None, kd_tree=None):
         kd_tree (scipy.spatial.KDTree, optional): kd-tree of `points`. Defaults to None.
 
     Returns:
-        (np.ndarray):
-        Force on `x` if not None, else, on the k-th point of `points` (1 times d array).
+        np.ndarray: Force on `x` if not None, else, on the k-th point of `points` (1 times d array).
     """
     if x is None:
         x = points[k]

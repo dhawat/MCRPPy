@@ -12,16 +12,65 @@ from mcrppy.spatial_windows import BoxWindow
 
 
 def monte_carlo_method(points, f, weights=None):
+    r"""Crude Monte Carlo method.
+
+    Estimates the integral of `f` by the summation of `f` evaluated at `points` and multiplied by `weights` if not None, else, divided by the cardinality of `points`.
+
+
+    Args:
+        points (np.ndarray): Evaluation points (N times d array).
+        f (callable): Integrand function.
+        weights (np.ndarray, optional): Weights (N times 1 array). Defaults to None.
+
+    Returns:
+        float: Monte Carlo estimation of the integral of `f`.
+    """
     if weights is None:
         points_nb = points.shape[0]
         weights = 1/points_nb
     return np.sum(f(points)*weights)
 
 def importance_sampling_mc(points, f, proposal, weights=None):
+    r"""Importance sampling Monte Carlo method.
+
+    Estimates the integral of `f` by the summation of `f` multiplied by the inverse of the proposal function (`proposal`) evaluated at `points` and multiplied by `weights` if not None, else, divided by the cardinality of `points`.
+
+    Args:
+        points (np.ndarray): Evaluation points (N times d array).
+        f (callable): Integrand function.
+        proposal (callable): Proposal function.
+        weights (np.ndarray, optional): Weights (N times 1 array). Defaults to None.
+
+    Returns:
+        float: Monte Carlo estimation of the integral of `f`.
+    """
     h = lambda x: f(x)/proposal(x)
     return monte_carlo_method(points, h, weights)
 
 def control_variate_mc(points, f, proposal, mean_proposal, c=None, weights=None):
+    r"""Monte Carlo control variate method.
+
+    Estimates the integral of `f` using a function :math:`h` called the proposal that is easier to evaluate and has a known integral (`mean_proposal`).
+    Formally, when `weights` is None, the integral of :math:`f` is estimated by
+
+    .. math::
+
+            \widehat{I}(f) := \frac{1}{N} \sum_{i=1}^N (f(x_i) - c(h(x_i) - \bar{h}))
+
+    where, :math:`x_i` are the evaluation points of cardinality :math:`N`, :math:`\bar{h}` is the mean of the proposal function evaluated at the points `x_i` and `c` is a constant chosen to minimize the variance of the estimate.
+    If `weights` is not None the factor :math:`\frac{1}{N}` is replaced with `weights`.
+
+    Args:
+        points (np.ndarray): Evaluation points (N times d array).
+        f (callable): Integrand function.
+        proposal (callable): Proposal function.
+        mean_proposal (float): Mean of the proposal function evaluated at a point of `points`.
+        c (float, optional): Constant chosen to minimize the variance of the estimate. Defaults to None.
+        weights (_type_, optional): Weights (N times 1 array). Defaults to None.
+
+    Returns:
+        float: Monte Carlo estimation of the integral of `f`.
+    """
     if c is None:
         c= estimate_control_variate_parameter(points, f, proposal)
     h = lambda x: f(x) - c*(proposal(x) - mean_proposal)
@@ -29,7 +78,26 @@ def control_variate_mc(points, f, proposal, mean_proposal, c=None, weights=None)
 
 def estimate_control_variate_parameter(points, f, proposal):
     r"""
-    :math:`\frac{\sum_{\mathbf{x} \in \mathcal{B}^{\prime} } f(\mathbf{x}) (h(\mathbf{x}) - \bar{h})}{\sum_{\mathbf{x} \in \mathcal{B}^{\prime}} (h(\mathbf{x}) - \bar{h})^2}`
+    Monte Carlo control variate parameter.
+
+    Estimate the parameter :math:`c` of the control variate Monte Carlo method for integrating :math:`f` with a proposal :math:`h` and evaluation points `points` by the following
+
+    .. math::
+
+            \hat{c} = \frac{\sum_{i=1 }^N f(x_i) (h(x_i) - \bar{h})}{\sum_{i=1 }^N (h(x_i) - \bar{h})^2}`
+
+    where, :math:`x_i` are the evaluation points of cardinality :math:`N`, :math:`\bar{h}` is the mean of the proposal function evaluated at the points `x_i`.
+
+
+    Args:
+        points (np.ndarray): Evaluation points (N times d array).
+        f (callable): Integrand function.
+        proposal (callable): Proposal function.
+        mean_proposal (float): Mean of the proposal function evaluated at a point of `points`.
+
+    Returns:
+        float: Estimated value of :math:`c`.
+
     """
     a  = proposal(points) - stat.mean(proposal(points))
     numerator = sum(f(points)*a)
@@ -37,6 +105,23 @@ def estimate_control_variate_parameter(points, f, proposal):
     return numerator/denominator
 #! add test
 def estimate_control_variate_proposal(points, f, poly_degree=2, plot=False):
+    """Monte Carlo control variate proposal.
+
+    The return proposal is a polynomial regression of degree at most 2 of the integrand function `f` at the Monte Carlo evaluation points `points`.
+
+    Args:
+        points (np.ndarray): Evaluation points (N times d array).
+        f (callable): Integrand function.
+        proposal (callable): Proposal function.
+        poly_degree (int, optional): Polynomial degree (1 or 2) of the returned proposal function. Defaults to 2.
+        plot (bool, optional): If True visualize the proposal function. Defaults to False.
+
+    Returns:
+        tuple(callable, float):
+            - proposal : proposal function.
+            - mean_proposal : the mean of the proposal function evakuated on a uniform random variable.
+    """
+
     d = points.shape[1]
     y = f(points)
     # create a polynomial features object to create 'poly_degree' degree polynomial features
