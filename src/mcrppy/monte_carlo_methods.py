@@ -6,7 +6,6 @@ from multiprocessing import freeze_support
 from multiprocessing.pool import Pool
 
 import numpy as np
-import pandas as pd
 from dppy.multivariate_jacobi_ope import MultivariateJacobiOPE
 from scipy import stats
 
@@ -19,14 +18,6 @@ from mcrppy.monte_carlo_base import (bandwidth_0_delyon_portier,
 from mcrppy.point_pattern import PointPattern
 from mcrppy.point_processes import BinomialPointProcess, ScrambleSobolPointProcess
 from mcrppy.utils import regression_line, error, mse
-
-def mc_f_dict(type_mc, se=True):
-    d = {}
-    d["m_"+type_mc]=[]
-    d["std_"+type_mc]=[]
-    if se:
-        d["error_"+type_mc]=[]
-    return d
 
 def mc_results(d, nb_points_list,
                nb_samples, support_window,
@@ -179,7 +170,7 @@ def dataframe_mse_results(mc_results, fct_names, exact_integrals, nb_samples, id
             std_mse = np.array(std_f/np.sqrt(nb_samples))
             mse_dict["MSE(" + name_f + ")"][t] = mse_f[idx_nb_point]
             mse_dict["std(MSE("+ name_f +"))"][t] = std_mse[idx_nb_point]
-    return pd.DataFrame(mse_dict)
+    return mse_dict
 
 # Kolmogorov Smirniv test for residual of the liear regression to test if the residual is Gaussian
 # q-q plot pf the residual of the linear regresssion of log(std) w.r.t. log(N)
@@ -193,7 +184,7 @@ def dataframe_residual_test(mc_list, nb_points_list, fct_names, test_type="SW", 
             _, _, _, _, result_test = regression_line(nb_points_list, std_f, residual=True,residual_normality_test=test_type, **kwargs)
             result_test_f_dict[t] =  ("stat={0:.3f}".format(result_test[0]), "p={0:.3}".format(result_test[1]))
         result_test_dict[name] = result_test_f_dict
-    return pd.DataFrame(result_test_dict)
+    return result_test_dict
 
 # Mann-Whitney test for the (square) errors of the method of type 'type_mc_test' with the others methods
 def dataframe_error_test(mc_list, nb_points_list, fct_name, type_mc_test="MCRB"):
@@ -210,7 +201,7 @@ def dataframe_error_test(mc_list, nb_points_list, fct_name, type_mc_test="MCRB")
             mw_test = stats.mannwhitneyu(error_test[n], error_tested_with[n])
             mw_test_N_dict["N={}".format(nb_points_list[n])] =  ("stat={0:.3f}".format(mw_test[0]), "p={0:.3}".format(mw_test[1]))
         mw_test_dict[type_mc_test+ " and "+ t] = mw_test_N_dict
-    return pd.DataFrame(mw_test_dict)
+    return mw_test_dict
 
 def _repelled_binomial_samples(nb_samples, nb_points, window, nb_cores=4, **repelled_params):
     binomial = BinomialPointProcess()
@@ -276,7 +267,7 @@ def _mc_result(pp_list, type_mc, fct_list,
     if mc_f_n is None:
         mc_f_n = {}
         for name in fct_names:
-            mc_f_n["mc_results_" +name] = mc_f_dict(type_mc=type_mc)
+            mc_f_n["mc_results_" +name] = _mc_f_dict(type_mc=type_mc)
     i=0
     if type_mc=="MCCV":
         points_cv_proposal= support_window_cv.rand(n=nb_point_cv, seed=0)
@@ -331,3 +322,11 @@ def _mc_result(pp_list, type_mc, fct_list,
                 print("MSE=", mse_mc)
         i+=1
     return mc_f_n
+
+def _mc_f_dict(type_mc, se=True):
+    d = {}
+    d["m_"+type_mc]=[]
+    d["std_"+type_mc]=[]
+    if se:
+        d["error_"+type_mc]=[]
+    return d

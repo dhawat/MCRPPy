@@ -103,6 +103,7 @@ def estimate_control_variate_parameter(points, f, proposal):
     numerator = sum(f(points)*a)
     denominator = sum(a**2)
     return numerator/denominator
+
 #! add test
 def estimate_control_variate_proposal(points, f, poly_degree=2, plot=False):
     """Monte Carlo control variate proposal.

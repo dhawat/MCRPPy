@@ -4,7 +4,7 @@ from functools import partial
 from scipy.spatial import KDTree
 from mcrppy.coulomb_force import force_k
 from mcrppy.point_pattern import PointPattern
-from mcrppy.utils import reshape_output_repelled_point, _sort_point_pattern, volume_unit_ball
+from mcrppy.utils import reshape_output_repelled_point, volume_unit_ball
 from mcrppy.spatial_windows import subwindow_parameter_max
 
 class RepelledPointProcess:
