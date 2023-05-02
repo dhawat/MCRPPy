@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "mcrppy"
 version = "0.1.0"
-description = "Simulating a repelled point process with applicatio to Monte carlo method for numerical integration"
+description = "Simulating a repelled point process and Monte carlo methods for numerical integration"
 license = "MIT"
 authors = ["Diala Hawat <dialahawat7@gmail.com>"]
 maintainers = ["Diala Hawat <dialahawat7@gmail.com>"]
