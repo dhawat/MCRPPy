@@ -121,7 +121,7 @@ def add_plot_error(d, ax, mc_list, estimators, nb_points_list, error_type, color
         error_f = [error_f[j] for j in idx_subsample]
         x = np.array(nb_points_list) +skip_x*i
         nb_list_expended = [[n]*len(e) for n,e in zip(nb_points_list, error_f)]
-        #print("here in plot", np.array(nb_list_expended), error_f)
+        print("here in plot", np.array(nb_list_expended), error_f)
         ax.scatter(np.array(nb_list_expended) +skip_x*i,
                     error_f,
                     c=color_list[i],
