@@ -1,3 +1,4 @@
+## plot functions
 import numpy as np
 import matplotlib.pyplot as plt
 from mcrppy.utils import regression_line
