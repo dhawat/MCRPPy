@@ -1,7 +1,7 @@
 # Monte Carlo with the repelled point processes (MCRPPy)
 
 [![CI-tests](https://github.com/dhawat/MCRPPy/actions/workflows/ci.yml/badge.svg)](https://github.com/dhawat/MCRPPy/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/dhawat/MCRPPy/branch/main/graph/badge.svg?token=${{ secrets.CODE_COV_TOKEN }})](https://codecov.io/gh/dhawat/MCRPPy)
+[![codecov](https://codecov.io/gh/dhawat/MCRPPy/branch/main/graph/badge.svg?token=CODE_COV_TOKEN)](https://codecov.io/gh/dhawat/MCRPPy)
 [![Python >=3.8,<3.10](https://img.shields.io/badge/python->=3.8,<3.10-blue.svg)](https://www.python.org/downloads/release/python-371/)
 
 > Sample a repelled point process and compute a Monte Carlo estimation for the integral of a function using various variants of the Monte Carlo method, including the Monte Carlo with a repelled point process.

@@ -19,7 +19,7 @@ def _plot_proposal(f, proposal, dim=2):
     else:
         raise ValueError("Actually, only available for 2D")
 
-# plot for monte_carlo_methods
+# plot monte_carlo_methods
 
 def plot_mc_results(d, mc_list, nb_points_list, fct_list, fct_names, log_scale=False, save_fig=None, plot_dim=2, error_type="SE",  plot_std=True, plot_error=False, plot_fct=False, nb_subsample_nb_points=None, estimators=None):
     nb_fct = len(fct_list)
