@@ -7,6 +7,25 @@ authors = ["Diala Hawat <dialahawat7@gmail.com>"]
 maintainers = ["Diala Hawat <dialahawat7@gmail.com>"]
 readme = "README.md"
 keywords = ["Repelled point process", "Monte Carlo method"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Scientific/Engineering :: Mathematics",
+] # https://pypi.org/classifiers/
+
+# https://python-poetry.org/docs/pyproject/#packages
+packages = []
+
+# https://python-poetry.org/docs/pyproject/#include-and-exclude
+# unexpected behavior when using include = ["data/**/*"]
+# will put data at root of site-packages not in package folder
+# https://github.com/python-poetry/poetry/issues/2015
+# Fall back: create a subpackage src/packagename/data
+include = []
+exclude = []
 
 # Main dependencies
 [tool.poetry.dependencies]
@@ -43,7 +62,7 @@ ipykernel = "^6.22.0"
 [tool.pytest.ini_options]
 # poetry run pytest
 minversion = "6.0"
-addopts = "-ra -q -vv --cov=packagename --cov-report=term-missing --cov-report=xml"
+addopts = "-ra -q -vv --cov=mcrppy --cov-report=term-missing --cov-report=xml"
 testpaths = ["tests"]
 
 [build-system]
