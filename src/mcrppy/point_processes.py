@@ -6,6 +6,8 @@
 
 - :py:class:`~mcrppy.point_processes.GinibrePointProcess`: The Ginibre point process.
 
+- :py:class:`~mcrppy.point_processes.ScrambledSobol`: The Ginibre point process.
+
 - :py:func:`~mcrppy.point_processes.mutual_nearest_neighbor_matching`: The matching process of :cite:`KlaLasYog20`.
 
 Based on `https://github.com/For-a-few-DPPs-more/structure-factor/blob/main/src/structure_factor/point_processes.py`
