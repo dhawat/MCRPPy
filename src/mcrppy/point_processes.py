@@ -110,7 +110,7 @@ class ThomasPointProcess:
     @property
     def intensity(self):
         return self._intensity
-
+    #! seed is not working
     def generate_sample(self, window, seed=None):
         if not isinstance(window, AbstractSpatialWindow):
             raise TypeError("window argument must be an AbstractSpatialWindow")
@@ -127,8 +127,8 @@ class ThomasPointProcess:
 
         pp = HomogeneousPoissonPointProcess(self.kappa)
         centers = pp.generate_sample(extended_window, seed=rng)
+        #! seed is not taking into consideration here
         n_per_cluster = np.random.poisson(self.mu, size=len(centers))
-
         d = window.dimension
         s = self.sigma
         points = np.vstack(
@@ -276,10 +276,11 @@ class ScrambleSobolPointProcess(object):
         points_unit_box = sobol.random(n=nb_points)
         points = (points_unit_box - 0.5)*l
         point_pattern = PointPattern(points, simulation_window).restrict_to_window(window)
+        point_pattern.intensity = point_pattern.points.shape[0]/window.volume
         return point_pattern
 
     def generate_sample(self, nb_points, window, seed=None, **kwargs):
-        point_pattern = self.generate_scramble_sobol_point_pattern(window, nb_points, seed=seed, **kwargs)
+        point_pattern = self.generate_point_pattern(window=window, nb_points=nb_points, seed=seed, **kwargs)
         return point_pattern.points
 
     def generate_repelled_point_pattern(self, nb_points, window, seed=None, add_boundary=None, output=None, **repelled_params):
@@ -346,7 +347,7 @@ def _simulation_window_repelled_sample(window, add_boundary=None):
     d = window.dimension
     if isinstance(window, BoxWindow):
         l = min(np.diff(window.bounds, axis=1)) #length side window
-        r=math.sqrt(d*(l/2)**2) #radius ball window containing box_window
+        r=math.sqrt(d)*l/2 #radius ball window containing box_window
     else :
         r = window.radius
     if add_boundary is not None:
@@ -360,7 +361,7 @@ def _simulation_param_sobol_sequence(window, nb_points):
         l = np.max(np.diff(window.bounds))
     elif isinstance(window, BallWindow):
         l = 2*window.radius
-        nb_points = int(nb_points/window.volume*(l**d))
+    nb_points = int(nb_points/window.volume*(l**d))
     return l, nb_points
 
 def mutual_nearest_neighbor_matching(X, Y, **KDTree_params):
