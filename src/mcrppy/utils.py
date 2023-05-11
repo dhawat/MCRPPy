@@ -38,7 +38,7 @@ def jaccobi_measure(x, jac_params):
 
 # utils for monte_carlo_methods
 def _find_sum_of_coef_of_cubic_term(poly, d):
-    """Function used to find the sum of the coefficient of the quadratic terms in a polynomial regression of degree 2. Used to find the mean of the proposal in ``estimate_control_variate_proposal``.
+    """Function used to find the sum of the coefficient of the quadratic terms in a d-dimensional polynomial of degree 2. Used to find the mean of the proposal in ``estimate_control_variate_proposal``.
 
     _extended_summary_
 
