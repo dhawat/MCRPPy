@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from mcrppy.utils import sort_points_by_increasing_distance, reshape_output_repelled_point, jaccobi_measure
+from mcrppy.utils import sort_points_by_increasing_distance, reshape_output_repelled_point, jaccobi_measure, volume_unit_ball
 
 
 def test_sort_points_by_inc_dist():
@@ -28,3 +28,9 @@ def test_jaccobi_measure():
     expected = np.array([0, 9/8, 0])
     result = jaccobi_measure(x, jac_params)
     np.testing.assert_array_almost_equal(result, expected)
+
+def test_volume_unit_ball_window():
+    d=2
+    expected = np.pi
+    result = volume_unit_ball(d)
+    np.testing.assert_equal(expected, result)
