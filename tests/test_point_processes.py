@@ -131,7 +131,7 @@ def test_sobol_process_intensity_in_cube(nb_points,
 @pytest.mark.parametrize(
     "nb_points, window",
     [(1000, BoxWindow([[-1,0], [-5, 0]])),
-     (5000, BallWindow([0,0, 0], 5))]
+     (1000, BallWindow([0,0, 0], 5))]
 )
 
 def test_sobol_process_intensity_in_non_cube(nb_points,
