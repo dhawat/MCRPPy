@@ -23,7 +23,7 @@ This project serves as a companion code for the research paper titled ``Monte Ca
 
 ## Dependencies
 
-- `mcrppy` works with [![Python >=3.8,<3.10](https://img.shields.io/badge/python->=3.7.1,<3.10-blue.svg)](https://www.python.org/downloads/release/python-371/).
+- `mcrppy` works with [![Python >=3.8,<3.10](https://img.shields.io/badge/python->=3.8,<3.10-blue.svg)](https://www.python.org/downloads/release/python-371/).
 
 - Python dependencies are listed in the [`pyproject.toml`](./pyproject.toml) file.
 
