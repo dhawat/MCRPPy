@@ -16,13 +16,13 @@ class GravitationalAllocation:
         return self.point_pattern.points.shape[0]/self.point_pattern.window.volume
     @property
     def allocation_basin_volume(self):
-        """Volume of each basin of attraction of the gravitational allocation"""
+        """Volume of each basin of attraction of the gravitational allocation."""
         return 1 / self.point_pattern.intensity
 
     def _starting_points_2d(self, nb_points=40, scale=0.02):
-        #points will be diplayed on circles around each centers
-        #The radius of the circle will be propostionel to basins volume and controle by `scale`
-        #The number of angles on which the points will be placed is specidied by nb_points
+        #points will be displayed in circles around each center
+        #The radius of the circle will be proportional to the volume of the basins and controlled by `scale`
+        #The number of angles on which the points will be placed is specified by nb_points
         #output: list of 2d-arrays. each 2d-array contains teh starting points of a corresponding center
         centers = np.atleast_2d(self.point_pattern.points) #allocation centers
         intensity = self.point_pattern.intensity
@@ -36,7 +36,7 @@ class GravitationalAllocation:
 
     def _trajectory(self, point, stoptime=500, stepsize=None):
         #trajectoy of the point `point` by (inverse) gravitational allocation from the point pattern
-        #discritization scheme of the trajactory with fix step size `stepsize` and a stoping time `stoptime`.
+        #discritization scheme of the trajectory with fixed step size `stepsize` and a stopping time `stoptime`.
         #return 2d array of the trajectories
         centers = self.point_pattern.points
         intensity = self.point_pattern.intensity
@@ -49,7 +49,7 @@ class GravitationalAllocation:
         return np.vstack(point_trajectory)
 
     def trajectory(self, points, stoptime=500, stepsize=None):
-        #points shoud be (n,d) array
+        #points should be (n,d) array
         #return list of arrays; trajectories of points
         #positions of points w.r.t. time
         nb_points = points.shape[0]
