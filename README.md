@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/dhawat/MCRPPy/branch/main/graph/badge.svg?token=CODECOV_TOKEN)](https://codecov.io/gh/dhawat/MCRPPy)
 [![Python >=3.8,<3.10](https://img.shields.io/badge/python->=3.8,<3.10-blue.svg)](https://www.python.org/downloads/release/python-371/)
 
-> Sample a repelled point process and compute a Monte Carlo estimation for the integral of a function using various variants of the Monte Carlo method, including the Monte Carlo with a repelled point process.
+> Sampling repelled point processes, estimating the integral of a function using various Monte Carlo methods (including a Monte Carlo method with the repelled point process), and illustrating 2D gravitational allocation from the Lebesgue measure to a point process.
 
 - [Monte Carlo with the repelled point processes (MCRPPy)](#monte-carlo-with-the-repelled-point-processes-mcrppy)
   - [Introduction](#introduction)
