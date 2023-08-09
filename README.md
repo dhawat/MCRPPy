@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/dhawat/MCRPPy/branch/main/graph/badge.svg?token=CODECOV_TOKEN)](https://codecov.io/gh/dhawat/MCRPPy)
 [![Python >=3.8,<3.10](https://img.shields.io/badge/python->=3.8,<3.10-blue.svg)](https://www.python.org/downloads/release/python-371/)
 
-> Sampling repelled point processes, estimating the integral of a function using various Monte Carlo methods (including a Monte Carlo method with the repelled point process), and illustrating 2D gravitational allocation from the Lebesgue measure to a point process.
+> Sampling repelled point processes, estimating function integrals using various Monte Carlo methods (including a method with the repelled point process), and illustrating 2D gravitational allocation from the Lebesgue measure to a point process.
 
 - [Monte Carlo with the repelled point processes (MCRPPy)](#monte-carlo-with-the-repelled-point-processes-mcrppy)
   - [Introduction](#introduction)
@@ -18,12 +18,14 @@
 
 ## Introduction
 
-`mcrppy` is an open-source Python project that currently includes methods for sampling from a variety of point processes, including the homogeneous Poisson, Thomas, Ginibre, Scrambled Sobol, Binomial, and their repelled counterparts. The project also includes several variants of the Monte Carlo method, including Monte Carlo with a repelled point process.
-This project serves as a companion code for the research paper titled ``Monte Carlo with the repelled Poisson point process``; [see: How to cite this work](#how-to-cite-this-work).
+`MCRPPy` is an open-source Python package that currently includes methods for sampling from a variety of point processes, including the homogeneous Poisson, Thomas, Ginibre, scrambled Sobol, Binomial, and their repelled counterparts. The project also includes several Monte Carlo methods, including a Monte Carlo method with the repelled point process.
+Furthermore, the package provides tools for visualizing the gravitational allocation from the Lebesgue measure to a point process within a two-dimensional space (d=2)
+
+This project serves as a companion code for the research paper titled ``Repelled point processes with application to numerical integration``; [see: How to cite this work](#how-to-cite-this-work).
 
 ## Dependencies
 
-- `mcrppy` works with [![Python >=3.8,<3.10](https://img.shields.io/badge/python->=3.8,<3.10-blue.svg)](https://www.python.org/downloads/release/python-371/).
+- `MCRPPy` works with [![Python >=3.8,<3.10](https://img.shields.io/badge/python->=3.8,<3.10-blue.svg)](https://www.python.org/downloads/release/python-371/).
 
 - Python dependencies are listed in the [`pyproject.toml`](./pyproject.toml) file.
 
@@ -71,19 +73,24 @@ poetry install
 
 ### Companion paper
 
-We wrote a companion paper to `mcrppy`, "[Monte Carlo with the repelled Poisson point process](TBC)". In the paper, we introduced the repelled point process, analyzed its properties, and utilized it to develop a variance reduction Monte Carlo method (MCR). We also conducted a comparison study of MCR against other competing Monte Carlo methods.
+We wrote a companion paper to `MCRPPy`, "[Repelled point processes with application to numerical integration](TBC)".
+
+In the paper, we introduced the repelled point process, analyzed its properties, and use it to develop a Monte Carlo estimator for approximating function integrals.
+Our main theoretical result is that applying the repelled Poisson point process yields an unbiased Monte Carlo estimator with lower variance than the crude Monte Carlo method.
+On the computational side, the evaluation of our estimator is only quadratic in the number of integrand evaluations and can be easily parallelized without any communication across tasks.
+We illustrate the variance reduction result with numerical experiments and compare it to popular Monte Carlo methods.
+Finally, we numerically investigate a few open questions on the repulsion operator.
 
 ### Citation
 
-If `mcrppy` has been significant in your research, and you would like to acknowledge the project in your academic publication, please consider citing it with this piece of BibTeX::
+If `MCRPPy` has been significant in your research, and you would like to acknowledge the project in your academic publication, please consider citing it with this piece of BibTeX:
 
   ```bash
   @article{HBLR2023,
     arxivid = {TBC},
     journal = {TBC},
     author  = {Hawat, Diala and Bardenet, R{\'{e}}mi and Lachi{\`{e}}ze-Rey, Rapha{\"{e}}l},
-    note    = {TBC},
-    title   = {Monte Carlo with the repelled Poisson point process},
+    title   = {Repelled point processes with application to numerical integration},
     year    = {2023},
   }
   ```
