@@ -12,16 +12,17 @@
   - [Installation](#installation)
     - [Install the project as a dependency](#install-the-project-as-a-dependency)
     - [Install in editable mode and potentially contribute to the project](#install-in-editable-mode-and-potentially-contribute-to-the-project)
-  - [How to cite this work](#how-to-cite-this-work)
+  - [Getting started](#getting-started)
     - [Companion paper](#companion-paper)
-    - [Citation](#citation)
+    - [Notebooks](#notebooks)
+  - [How to cite this work](#how-to-cite-this-work)
 
 ## Introduction
 
 `MCRPPy` is an open-source Python package that currently includes methods for sampling from a variety of point processes, including the homogeneous Poisson, Thomas, Ginibre, scrambled Sobol, Binomial, and their repelled counterparts. The project also includes several Monte Carlo methods, including a Monte Carlo method with the repelled point process.
 Furthermore, the package provides tools for visualizing the gravitational allocation from the Lebesgue measure to a point process within a two-dimensional space (d=2)
 
-This project serves as a companion code for the research paper titled ``Repelled point processes with application to numerical integration``; [see: How to cite this work](#how-to-cite-this-work).
+This project serves as a companion code for the research paper titled [''Repelled point processes with application to numerical integration''](TBC); [see: How to cite this work](#how-to-cite-this-work).
 
 ## Dependencies
 
@@ -38,7 +39,7 @@ This project serves as a companion code for the research paper titled ``Repelled
   ```bash
   # activate your virtual environment and run
   poetry add git+https://github.com/dhawat/MCRPPy.git
-  # pip install git+https://github.com/For-a-few-DPPs-more/MCRPPy.git
+  # pip install git+https://github.com/dhawat/MCRPPy.git
   ```
 
 ### Install in editable mode and potentially contribute to the project
@@ -66,22 +67,37 @@ cd mcrppy
 poetry shell  # to create/activate local .venv (see poetry.toml)
 poetry install
 # poetry install --no-dev  # to avoid installing the development dependencies
-# poetry add -E docs -E structure-factor  # to install extra dependencies
+# poetry add -E docs -E MCRPPy  # to install extra dependencies
 ```
 
-## How to cite this work
+## Getting started
 
 ### Companion paper
 
 We wrote a companion paper to `MCRPPy`, "[Repelled point processes with application to numerical integration](TBC)".
 
-In the paper, we introduced the repelled point process, analyzed its properties, and use it to develop a Monte Carlo estimator for approximating function integrals.
-Our main theoretical result is that applying the repelled Poisson point process yields an unbiased Monte Carlo estimator with lower variance than the crude Monte Carlo method.
+In the paper, we introduce the repelled point process, analyze its properties, and use it to develop a Monte Carlo estimator for approximating function integrals.
+Our main theoretical result is that the repelled Poisson point process yields an unbiased Monte Carlo estimator with lower variance than the crude Monte Carlo method.
 On the computational side, the evaluation of our estimator is only quadratic in the number of integrand evaluations and can be easily parallelized without any communication across tasks.
 We illustrate the variance reduction result with numerical experiments and compare it to popular Monte Carlo methods.
 Finally, we numerically investigate a few open questions on the repulsion operator.
 
-### Citation
+### Notebooks
+
+We provide three tutorial Jupyter Notebooks available in the [./notebooks](./notebooks) folder.
+
+- ``tutorial_sample_repelled_point_pattern.ipynb``: tutorial for sampling a Repelled point process.
+- ``tutorial_monte_carlo_methods.ipynb``: tutorial for estimating function integrals using the available Monte Carlo methods.
+- ``tutorial_gravitational_allocation.ipynb``: tutorial for illustrating a two-dimensional gravitational allocation from Lebesgue to a point process.
+
+We also provide two Jupyter Notebooks for replicating the study of the [companion paper](#companion-paper).
+
+- ``companion_paper.ipynb``: main notebook.
+- ``structure_factor_and_pcf.ipynb``: supplementary notebook.
+
+See the README.md in the [./notebooks](./notebooks) folder for further instructions on how to run a notebook locally.
+
+## How to cite this work
 
 If `MCRPPy` has been significant in your research, and you would like to acknowledge the project in your academic publication, please consider citing it with this piece of BibTeX:
 
