@@ -20,7 +20,7 @@
 ## Introduction
 
 `MCRPPy` is an open-source Python package that currently includes methods for sampling from a variety of point processes, including the homogeneous Poisson, Thomas, Ginibre, scrambled Sobol, Binomial, and their repelled counterparts. The project also includes several Monte Carlo methods, including a Monte Carlo method with the repelled point process.
-Furthermore, the package provides tools for visualizing the gravitational allocation from the Lebesgue measure to a point process within a two-dimensional space (d=2)
+Furthermore, the package provides tools for visualizing the gravitational allocation from the Lebesgue measure to a point process within a two-dimensional space (d=2).
 
 This project serves as a companion code for the research paper titled [''Repelled point processes with application to numerical integration''](TBC); [see: How to cite this work](#how-to-cite-this-work).
 
