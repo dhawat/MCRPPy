@@ -22,7 +22,7 @@
 `MCRPPy` is an open-source Python package that currently includes methods for sampling from a variety of point processes, including the homogeneous Poisson, Thomas, Ginibre, scrambled Sobol, Binomial, and their repelled counterparts. The project also includes several Monte Carlo methods, including a Monte Carlo method with the repelled point process.
 Furthermore, the package provides tools for visualizing the gravitational allocation from the Lebesgue measure to a point process within a two-dimensional space (d=2).
 
-This project serves as a companion code for the research paper titled [''Repelled point processes with application to numerical integration''](TBC); [see: How to cite this work](#how-to-cite-this-work).
+This project serves as a companion code for the research paper titled [''Repelled point processes with application to numerical integration''](https://arxiv.org/abs/2308.04825); [see: How to cite this work](#how-to-cite-this-work).
 
 ## Dependencies
 
@@ -74,7 +74,7 @@ poetry install
 
 ### Companion paper
 
-We wrote a companion paper to `MCRPPy`, "[Repelled point processes with application to numerical integration](TBC)".
+We wrote a companion paper to `MCRPPy`, "[Repelled point processes with application to numerical integration](https://arxiv.org/abs/2308.04825)".
 
 In the paper, we introduce the repelled point process, analyze its properties, and use it to develop a Monte Carlo estimator for approximating function integrals.
 Our main theoretical result is that the repelled Poisson point process yields an unbiased Monte Carlo estimator with lower variance than the crude Monte Carlo method.
@@ -102,9 +102,9 @@ See the README.md in the [./notebooks](./notebooks) folder for further instructi
 If `MCRPPy` has been significant in your research, and you would like to acknowledge the project in your academic publication, please consider citing it with this piece of BibTeX:
 
   ```bash
-  @article{HBLR2023,
-    arxivid = {TBC},
-    journal = {TBC},
+  @preprint{HBLR2023,
+    arxivid = {2308.04825},
+    journal = {arXiv},
     author  = {Hawat, Diala and Bardenet, R{\'{e}}mi and Lachi{\`{e}}ze-Rey, Rapha{\"{e}}l},
     title   = {Repelled point processes with application to numerical integration},
     year    = {2023},

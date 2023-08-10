@@ -7,7 +7,7 @@ We provide three tutorial Jupyter Notebooks.
 - ``tutorial_gravitational_allocation.ipynb``: tutorial for illustrating a two-dimensional gravitational allocation from Lebesgue to a point process.
 
 We also provide two Jupyter Notebooks for replicating the study of the companion paper
-[''Repelled point processes with application to numerical integration''](TBC).
+[''Repelled point processes with application to numerical integration''](https://arxiv.org/abs/2308.04825).
 
 - ``companion_paper.ipynb``: main notebook.
 - ``structure_factor_and_pcf.ipynb``: supplementary notebook.
